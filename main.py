@@ -1,0 +1,566 @@
+"""
+Meeting recorder demo backend.
+
+Flow:
+  browser records mic in short segments
+    -> POST /transcribe  (each segment -> Deepgram transcription -> text)
+    -> browser appends text to a live transcript
+    -> POST /spec        (full transcript -> LLM -> functional spec)
+
+Everything is kept deliberately thin so the pipeline is easy to see and debug.
+"""
+import io
+import json
+import os
+import re
+import shutil
+import subprocess
+import time
+import uuid
+from pathlib import Path
+
+import httpx
+from docx import Document
+from docx.shared import Pt
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from openai import OpenAI
+
+load_dotenv()
+
+# --- Transcription: Deepgram -------------------------------------------------
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
+DEEPGRAM_URL = "https://api.deepgram.com/v1/listen"
+# nova-3 is Deepgram's latest/most accurate general model.
+TRANSCRIBE_MODEL = os.getenv("TRANSCRIBE_MODEL", "nova-3")
+# Force English so short segments aren't misdetected as another language.
+TRANSCRIBE_LANGUAGE = os.getenv("TRANSCRIBE_LANGUAGE", "en")
+# Comma-separated domain terms (names, product words, Singlish) to bias toward.
+# Deepgram calls this "keyterm prompting" on nova-3.
+TRANSCRIBE_KEYTERMS = [
+    t.strip() for t in os.getenv("TRANSCRIBE_KEYTERMS", "").split(",") if t.strip()
+]
+
+# --- Spec generation: OpenAI -------------------------------------------------
+SPEC_MODEL = os.getenv("SPEC_MODEL", "gpt-5.4-mini")
+
+BASE_DIR = Path(__file__).parent
+REC_DIR = BASE_DIR / "recordings"
+REC_DIR.mkdir(exist_ok=True)
+GEN_DIR = BASE_DIR / "generated"          # Claude Code writes prototypes here
+GEN_DIR.mkdir(exist_ok=True)
+
+# Path to the Claude Code CLI (falls back to PATH lookup at request time).
+CLAUDE_BIN = shutil.which("claude") or "claude"
+
+client = OpenAI()  # reads OPENAI_API_KEY from env; used only for /spec
+app = FastAPI(title="VAMPS")
+
+# In-memory registry of prototype build jobs: id -> {proc, dir, started}
+BUILD_JOBS: dict = {}
+
+
+# The model returns a JSON object: {"spec": "<markdown>", "questions": [ ... ]}.
+# `spec` follows this structure; `questions` are the analyst's live clarifications.
+SPEC_STRUCTURE = """# Functional Specification
+
+## 1. Meeting Summary
+2-4 sentences: who/what/why.
+
+## 2. Client Goals & Pain Points
+Bulleted list.
+
+## 3. Proposed Solution / Scope
+What we will build or deliver.
+
+## 4. Functional Requirements
+Numbered list. Each item: a concrete, testable requirement.
+
+## 5. Non-Functional Requirements
+Performance, security, compliance, etc. (only if mentioned or clearly implied.)
+
+## 6. Action Items
+Who does what next (use "Unassigned" if the transcript doesn't say)."""
+
+SPEC_SYSTEM = f"""You are a business analyst supporting a sales team. You turn
+the raw material of a client meeting (a transcript that may contain
+transcription errors, filler words and overlapping speakers, plus any
+pre-existing notes) into a clear FUNCTIONAL SPECIFICATION.
+
+FIRST, filter the material. A real meeting transcript is full of content that is
+NOT about what to build: greetings and small talk, scheduling and logistics,
+side conversations, jokes, weather, off-topic tangents, people testing the mic,
+and unrelated chit-chat. IGNORE all of that. Base the specification ONLY on
+content relevant to the client's product, goals, needs, scope, and requirements.
+Never turn an off-topic remark into a requirement, an action item, or a
+clarifying question. If a whole segment is irrelevant, leave the spec unchanged.
+
+You ALWAYS respond with a single JSON object with exactly these keys:
+  "spec":      a Markdown string using EXACTLY this structure and headings:
+{SPEC_STRUCTURE}
+  "questions": an array of short, specific clarifying questions (strings) that
+               you, as the analyst, STILL need answered. These are things the
+               material leaves ambiguous. Keep each to one sentence. Do NOT
+               include a question here if the material already answers it.
+               Return [] if nothing needs clarifying.
+  "answered":  an array of objects {{"question": <string>, "answer": <string>,
+               "evidence": <string>}}. Include a CURRENTLY OPEN QUESTION here
+               ONLY if the material EXPLICITLY answers it:
+                 - "question": the open question's exact text.
+                 - "answer": one sentence stating the answer.
+                 - "evidence": a SHORT quote copied WORD-FOR-WORD from the
+                   material that states the answer. Do NOT paraphrase, translate,
+                   summarise, or invent this quote — copy it verbatim.
+               A topic merely being MENTIONED is NOT the same as being answered.
+               If you would have to guess, infer, assume, or read between the
+               lines, DO NOT put it here — leave it in "questions". When in
+               doubt, leave the question open. Return [] if nothing is
+               explicitly resolved this turn.
+
+Be concrete. If something was not discussed, write "Not discussed" rather than
+inventing details. Do NOT put a questions section inside the spec markdown;
+clarifications belong only in "questions" / "answered"."""
+
+# First pass: no prior spec exists yet.
+SPEC_USER_INITIAL = """Produce the functional specification from the material below.
+
+MATERIAL:
+---
+{transcript}
+---"""
+
+# Later passes: revise the existing spec in light of newly transcribed material.
+SPEC_USER_REVISE = """A functional specification already exists (below). NEW
+material has since been transcribed. REVISE and extend the existing spec so it
+reflects everything now known — keep what still holds, correct what changed, and
+fold in the new details. Do not discard prior content just because it is not
+repeated in the new material.
+
+{resolved_block}{open_block}EXISTING SPECIFICATION:
+---
+{previous_spec}
+---
+
+FULL MATERIAL SO FAR (includes the new transcript):
+---
+{transcript}
+---"""
+
+
+VERIFY_SYSTEM = """You are a strict fact-checker for a business analyst. You are
+given a meeting transcript and candidate items, each with a QUESTION, a proposed
+ANSWER, and an EVIDENCE quote. For each, decide whether the transcript
+EXPLICITLY and UNAMBIGUOUSLY answers the question.
+
+Mark answered = false when ANY of these hold:
+  - the topic is only mentioned in passing;
+  - the speaker defers or hedges it ("decide later", "not sure", "maybe", "we'll see");
+  - answering would require guessing, inference, or assumption;
+  - the evidence quote does not, on its own, directly state the answer.
+
+Be conservative: if there is any doubt, answered = false.
+
+Respond with a single JSON object:
+{"results": [{"question": "<the exact question text>", "answered": true or false}]}"""
+
+
+def _verify_answers(candidates: list, transcript: str) -> list:
+    """Second-pass skeptic: keep only candidates the model confirms are truly answered."""
+    if not candidates:
+        return []
+    listing = "\n\n".join(
+        f'{i+1}. QUESTION: {c["question"]}\n   PROPOSED ANSWER: {c["answer"]}\n   EVIDENCE: "{c["evidence"]}"'
+        for i, c in enumerate(candidates)
+    )
+    user = f"TRANSCRIPT:\n---\n{transcript}\n---\n\nCANDIDATES:\n{listing}"
+    try:
+        resp = client.chat.completions.create(
+            model=SPEC_MODEL,
+            messages=[{"role": "system", "content": VERIFY_SYSTEM}, {"role": "user", "content": user}],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(resp.choices[0].message.content or "{}")
+        confirmed = {
+            _normalize(str(r.get("question", "")))
+            for r in data.get("results", [])
+            if r.get("answered") is True
+        }
+        return [c for c in candidates if _normalize(c["question"]) in confirmed]
+    except Exception:
+        # On verifier failure, fall back to the evidence-checked candidates rather than crash.
+        return candidates
+
+
+def _normalize(s: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace — for grounding checks."""
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", s.lower())).strip()
+
+
+def _evidence_supported(evidence: str, transcript: str) -> bool:
+    """True only if the model's quote is actually present in the material.
+
+    Guards against the model marking a question "answered" when the conversation
+    merely touched the topic. Requires either a verbatim substring match, or a
+    high overlap of the quote's significant words (tolerates minor paraphrase).
+    """
+    ev = _normalize(evidence)
+    if len(ev) < 4:
+        return False
+    tx = _normalize(transcript)
+    if ev in tx:
+        return True
+    words = {w for w in ev.split() if len(w) > 3}
+    if not words:
+        return False
+    hits = sum(1 for w in words if w in tx)
+    return hits / len(words) >= 0.8
+
+
+def _build_spec_messages(
+    transcript: str, previous_spec: str, resolved: list, open_questions: list
+) -> list:
+    """Assemble the chat messages for either a first-pass or a revision call."""
+    if previous_spec.strip():
+        resolved_block = ""
+        if resolved:
+            joined = "\n".join(f"- {q}" for q in resolved)
+            resolved_block = (
+                "The following questions were already resolved by the client — "
+                "treat them as answered and do NOT raise them again:\n"
+                f"{joined}\n\n"
+            )
+        open_block = ""
+        if open_questions:
+            joined = "\n".join(f"- {q}" for q in open_questions)
+            open_block = (
+                "CURRENTLY OPEN QUESTIONS (still awaiting an answer). If the "
+                "latest material now answers any of these, move it into "
+                '"answered" with a one-sentence answer instead of repeating it:\n'
+                f"{joined}\n\n"
+            )
+        user = SPEC_USER_REVISE.format(
+            resolved_block=resolved_block,
+            open_block=open_block,
+            previous_spec=previous_spec,
+            transcript=transcript,
+        )
+    else:
+        user = SPEC_USER_INITIAL.format(transcript=transcript)
+    return [
+        {"role": "system", "content": SPEC_SYSTEM},
+        {"role": "user", "content": user},
+    ]
+
+
+@app.get("/")
+def index():
+    # no-store so an edited UI always loads fresh (this app is under active iteration)
+    return FileResponse(
+        BASE_DIR / "static" / "index.html",
+        headers={"Cache-Control": "no-store, must-revalidate"},
+    )
+
+
+@app.post("/transcribe")
+async def transcribe(
+    audio: UploadFile = File(...),
+    seq: int = Form(0),
+    session: str = Form("default"),
+):
+    """Transcribe one audio segment via Deepgram. Returns text + timing for the debug panel."""
+    t0 = time.time()
+    data = await audio.read()
+    size_kb = round(len(data) / 1024, 1)
+
+    # Keep a local backup of every segment (client meetings are high-stakes).
+    fname = REC_DIR / f"{session}_{seq:04d}.webm"
+    fname.write_bytes(data)
+
+    if not DEEPGRAM_API_KEY:
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "seq": seq, "size_kb": size_kb,
+                     "error": "DEEPGRAM_API_KEY is not set in .env"},
+        )
+
+    # Deepgram pre-recorded API: POST the raw audio bytes, options go in the query string.
+    # smart_format adds punctuation/capitalization; language pins it to English.
+    params = {
+        "model": TRANSCRIBE_MODEL,
+        "language": TRANSCRIBE_LANGUAGE,
+        "smart_format": "true",
+    }
+    if TRANSCRIBE_KEYTERMS:
+        params["keyterm"] = TRANSCRIBE_KEYTERMS  # repeated query param, one per term
+    content_type = audio.content_type or "audio/webm"
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as http:
+            resp = await http.post(
+                DEEPGRAM_URL,
+                params=params,
+                content=data,
+                headers={
+                    "Authorization": f"Token {DEEPGRAM_API_KEY}",
+                    "Content-Type": content_type,
+                },
+            )
+        resp.raise_for_status()
+        body = resp.json()
+        # transcript lives at results.channels[0].alternatives[0].transcript
+        alt = body["results"]["channels"][0]["alternatives"][0]
+        text = (alt.get("transcript") or "").strip()
+        return {
+            "ok": True,
+            "seq": seq,
+            "text": text,
+            "size_kb": size_kb,
+            "latency_s": round(time.time() - t0, 2),
+            "model": TRANSCRIBE_MODEL,
+            "confidence": alt.get("confidence"),
+        }
+    except httpx.HTTPStatusError as e:
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "seq": seq, "size_kb": size_kb,
+                     "error": f"Deepgram {e.response.status_code}: {e.response.text[:300]}"},
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "seq": seq, "size_kb": size_kb, "error": str(e)},
+        )
+
+
+@app.post("/spec")
+async def spec(payload: dict):
+    """Generate or revise the functional spec, plus clarifying questions.
+
+    First call (no previous_spec) writes the spec from scratch; every later call
+    revises the existing spec in light of the latest transcript, so the model
+    always builds on what it produced before.
+    """
+    transcript = (payload.get("transcript") or "").strip()
+    previous_spec = (payload.get("previous_spec") or "").strip()
+    resolved = [str(q).strip() for q in (payload.get("resolved_questions") or []) if str(q).strip()]
+    open_qs = [str(q).strip() for q in (payload.get("open_questions") or []) if str(q).strip()]
+    if not transcript:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "empty transcript"})
+
+    t0 = time.time()
+    try:
+        resp = client.chat.completions.create(
+            model=SPEC_MODEL,
+            messages=_build_spec_messages(transcript, previous_spec, resolved, open_qs),
+            temperature=0.3,
+            response_format={"type": "json_object"},
+        )
+        raw = resp.choices[0].message.content or "{}"
+        data = json.loads(raw)
+        spec_md = (data.get("spec") or "").strip()
+        questions = [str(q).strip() for q in (data.get("questions") or []) if str(q).strip()]
+        # Auto-resolve a question only if (1) its verbatim evidence is really in the
+        # material, and (2) a strict skeptic pass confirms it's genuinely answered.
+        candidates = []
+        for a in (data.get("answered") or []):
+            if not isinstance(a, dict):
+                continue
+            q = str(a.get("question", "")).strip()
+            if q and _evidence_supported(str(a.get("evidence", "")), transcript):
+                candidates.append({
+                    "question": q,
+                    "answer": str(a.get("answer", "")).strip(),
+                    "evidence": str(a.get("evidence", "")).strip(),
+                })
+        confirmed = _verify_answers(candidates, transcript)
+        answered = [{"question": c["question"], "answer": c["answer"]} for c in confirmed]
+        # Any candidate that failed either gate stays visible as an open question.
+        answered_texts = {a["question"] for a in answered}
+        for a in (data.get("answered") or []):
+            if isinstance(a, dict):
+                q = str(a.get("question", "")).strip()
+                if q and q not in answered_texts and q not in questions:
+                    questions.append(q)
+        questions = [q for q in questions if q not in answered_texts]
+        return {
+            "ok": True,
+            "spec": spec_md,
+            "questions": questions,
+            "answered": answered,
+            "revised": bool(previous_spec),
+            "latency_s": round(time.time() - t0, 2),
+            "model": SPEC_MODEL,
+            "transcript_chars": len(transcript),
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+
+
+@app.post("/upload_notes")
+async def upload_notes(file: UploadFile = File(...)):
+    """Ingest pre-existing meeting notes / a spec (.docx, .txt, .md) as seed material."""
+    data = await file.read()
+    name = file.filename or "notes"
+    ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
+    try:
+        if ext == "docx":
+            doc = Document(io.BytesIO(data))
+            text = "\n".join(p.text for p in doc.paragraphs)
+        else:
+            # txt / md / anything text-like
+            text = data.decode("utf-8", errors="replace")
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"ok": False, "error": f"could not read {name}: {e}"})
+
+    text = text.strip()
+    if not text:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "file had no readable text"})
+    return {"ok": True, "name": name, "text": text, "chars": len(text)}
+
+
+def _add_runs(paragraph, text):
+    """Render inline **bold** markdown into docx runs."""
+    for i, part in enumerate(re.split(r"\*\*(.+?)\*\*", text)):
+        if not part:
+            continue
+        run = paragraph.add_run(part)
+        run.bold = i % 2 == 1  # odd segments were inside ** **
+
+
+def spec_to_docx(spec_md: str) -> io.BytesIO:
+    """Convert the spec Markdown into a simple, clean .docx."""
+    doc = Document()
+    style = doc.styles["Normal"]
+    style.font.name = "Calibri"
+    style.font.size = Pt(11)
+
+    for line in spec_md.split("\n"):
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("### "):
+            doc.add_heading(s[4:], level=3)
+        elif s.startswith("## "):
+            doc.add_heading(s[3:], level=2)
+        elif s.startswith("# "):
+            doc.add_heading(s[2:], level=1)
+        elif re.match(r"^[-*]\s+", s):
+            _add_runs(doc.add_paragraph(style="List Bullet"), re.sub(r"^[-*]\s+", "", s))
+        elif re.match(r"^\d+\.\s+", s):
+            _add_runs(doc.add_paragraph(style="List Number"), re.sub(r"^\d+\.\s+", "", s))
+        else:
+            _add_runs(doc.add_paragraph(), s)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+@app.post("/export")
+async def export(payload: dict):
+    """Return the spec as a downloadable Word (.docx) file."""
+    spec_md = (payload.get("spec") or "").strip()
+    if not spec_md:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "empty spec"})
+    buf = spec_to_docx(spec_md)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": 'attachment; filename="functional-spec.docx"'},
+    )
+
+
+# --- Prototype builder: hand the spec to Claude Code ------------------------
+BUILD_PROMPT = """Read SPEC.md in this directory. Build a single, self-contained
+clickable PROTOTYPE in ONE file named index.html.
+
+Requirements:
+- Everything inline in index.html: HTML + CSS + JavaScript. No external files,
+  no CDNs, no build step, no network calls.
+- Use realistic placeholder/mock data so the key screens and flows from the spec
+  are demonstrable by clicking around. This is a visual prototype, not a real
+  backend.
+- Keep it clean and simple — the goal is to show something at the end of a
+  meeting, not a finished product.
+- Create ONLY index.html. Do not create other files or run any commands."""
+
+
+@app.post("/build")
+async def build(payload: dict):
+    """Kick off a headless Claude Code run that turns the spec into a prototype."""
+    spec_md = (payload.get("spec") or "").strip()
+    if not spec_md:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "empty spec"})
+
+    job_id = uuid.uuid4().hex[:8]
+    out = GEN_DIR / job_id
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "SPEC.md").write_text(spec_md, encoding="utf-8")
+    log_path = out / "build.log"
+
+    # File tools only (no Bash) + confined to this throwaway dir: even a spec with
+    # injected instructions can't run commands on the machine.
+    cmd = [
+        CLAUDE_BIN, "-p", BUILD_PROMPT,
+        "--permission-mode", "acceptEdits",
+        "--allowed-tools", "Write", "Edit", "Read", "MultiEdit",
+    ]
+    try:
+        log_f = open(log_path, "w", encoding="utf-8")
+        proc = subprocess.Popen(
+            cmd, cwd=str(out), stdout=log_f, stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        return JSONResponse(status_code=500, content={
+            "ok": False, "error": "Claude Code CLI ('claude') not found on PATH."})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+
+    BUILD_JOBS[job_id] = {"proc": proc, "dir": out, "log": log_path, "started": time.time()}
+    return {"ok": True, "job_id": job_id}
+
+
+@app.get("/build/status/{job_id}")
+def build_status(job_id: str):
+    """Poll a build job: running / done / error, with the app URL once ready."""
+    job = BUILD_JOBS.get(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
+    proc = job["proc"]
+    rc = proc.poll()
+    index_ready = (job["dir"] / "index.html").exists()
+    log = ""
+    try:
+        log = job["log"].read_text(encoding="utf-8", errors="replace")[-4000:]
+    except Exception:
+        pass
+    if rc is None:
+        status = "running"
+    elif rc == 0:
+        status = "done" if index_ready else "done_no_file"
+    else:
+        status = "error"
+    return {
+        "ok": True,
+        "status": status,
+        "elapsed_s": round(time.time() - job["started"], 1),
+        "index_ready": index_ready,
+        "app_url": f"/generated/{job_id}/index.html" if index_ready else None,
+        "returncode": rc,
+        "log": log,
+    }
+
+
+app.mount("/generated", StaticFiles(directory=GEN_DIR, html=True), name="generated")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8000)

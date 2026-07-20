@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VAMPS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F6F7F9; --surface: #FFFFFF; --surface-2: #F1F3F6; --surface-3: #E9ECF1;
+    --text: #15171C; --text-2: #565C68; --text-3: #8A909C;
+    --border: #E7E9ED; --border-2: #D8DCE2;
+    --accent: #5B5BD6; --accent-hover: #4B4BC6; --accent-soft: #ECECFB; --accent-2: #6E6ADE;
+    --danger: #E5484D; --danger-soft: #FDECEC;
+    --success: #2F9E68; --success-soft: #E7F5EE;
+    --ring: rgba(91,91,214,.35);
+    --f: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --m: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sh-1: 0 1px 2px rgba(21,23,28,.05);
+    --sh-2: 0 1px 3px rgba(21,23,28,.06), 0 8px 24px -8px rgba(21,23,28,.10);
+    --r-s: 8px; --r: 11px; --r-l: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--f);
+    font-size: 14px; line-height: 1.5; letter-spacing: -.006em; -webkit-font-smoothing: antialiased; }
+  svg { display: block; }
+  [hidden] { display: none !important; }   /* keep the hidden attribute authoritative over display rules */
+  .icon { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.75;
+    stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+
+  /* ---------- top bar ---------- */
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 0 22px; height: 56px;
+    background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(150deg, var(--accent-2), var(--accent));
+    display: grid; place-items: center; box-shadow: var(--sh-1); }
+  .logo svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 2; }
+  .brand { font-weight: 600; font-size: 14.5px; letter-spacing: -.02em; }
+  .brand .thin { color: var(--text-3); font-weight: 500; margin-left: 7px; }
+  .topbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .kv { font-family: var(--m); font-size: 11px; color: var(--text-3); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+
+  main { max-width: 1000px; margin: 0 auto; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ---------- recorder ---------- */
+  .recorder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l);
+    box-shadow: var(--sh-2); padding: 14px; display: flex; align-items: center; gap: 16px; }
+  .rec-btn { width: 46px; height: 46px; flex: 0 0 auto; border-radius: 13px; cursor: pointer;
+    border: 1px solid var(--border-2); background: var(--surface); color: var(--accent);
+    display: grid; place-items: center; transition: background .15s, border-color .15s, transform .1s; }
+  .rec-btn svg { width: 20px; height: 20px; }
+  .rec-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .rec-btn:active { transform: scale(.96); }
+  .rec-btn.live { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .rec-btn.live:hover { background: #d43b40; }
+
+  .rec-meta { display: flex; flex-direction: column; gap: 3px; min-width: 116px; }
+  .rec-meta .time { font-family: var(--m); font-size: 21px; font-variant-numeric: tabular-nums;
+    letter-spacing: -.03em; line-height: 1; }
+  .rec-meta .state { font-size: 12.5px; color: var(--text-2); display: flex; align-items: center; gap: 7px; }
+  .rec-meta .led { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); flex: 0 0 auto; }
+  .state.rec .led { background: var(--danger); animation: blink 1.2s infinite; }
+  .state.work .led { background: var(--accent); animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .wave-wrap { flex: 1 1 auto; height: 44px; min-width: 60px; }
+  #wave { width: 100%; height: 100%; display: block; }
+
+  .rec-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .btn { font: inherit; font-weight: 500; font-size: 13px; border-radius: var(--r-s); cursor: pointer;
+    border: 1px solid var(--border-2); background: var(--surface); color: var(--text);
+    padding: 8px 12px; display: inline-flex; align-items: center; gap: 7px; letter-spacing: -.01em;
+    transition: background .15s, border-color .15s; }
+  .btn:hover { background: var(--surface-2); }
+  .btn .icon { width: 15px; height: 15px; color: var(--text-2); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.subtle { border-color: transparent; background: transparent; color: var(--text-2); padding: 8px 10px; }
+  .btn.subtle:hover { background: var(--surface-2); color: var(--text); }
+  .seg { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; font-family: var(--m); }
+  .seg input { width: 42px; font: inherit; font-size: 12px; text-align: center; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-2); border-radius: 7px; padding: 6px 4px; }
+  .kbd { font-family: var(--m); font-size: 10.5px; color: var(--text-3); border: 1px solid var(--border-2);
+    border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; background: var(--surface); }
+
+  /* ---------- workspace ---------- */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l);
+    box-shadow: var(--sh-2); overflow: hidden; }
+  .tabs { display: flex; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .tab { appearance: none; border: none; background: transparent; cursor: pointer; font-family: var(--f);
+    font-weight: 500; font-size: 13px; color: var(--text-2); padding: 7px 12px; border-radius: var(--r-s);
+    display: inline-flex; align-items: center; gap: 8px; letter-spacing: -.01em; transition: background .12s, color .12s; }
+  .tab:hover { background: var(--surface-2); color: var(--text); }
+  .tab.active { background: var(--surface-3); color: var(--text); font-weight: 600; }
+  .tab .count { font-family: var(--m); font-size: 10.5px; min-width: 18px; text-align: center;
+    padding: 1px 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border-2); color: var(--text-2); }
+  .tab .count.hot { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+  .tab .count.ok { background: var(--success-soft); border-color: transparent; color: var(--success); }
+  .tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: none; }
+  .tab-dot.show { display: inline-block; animation: fade .2s ease; }
+
+  .pane { display: none; }
+  .pane.active { display: block; animation: fade .2s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .empty { color: var(--text-3); display: flex; flex-direction: column; align-items: center; gap: 10px;
+    text-align: center; padding: 54px 20px; font-size: 13.5px; }
+  .empty .icon { width: 26px; height: 26px; color: var(--border-2); stroke-width: 1.5; }
+  .empty span { max-width: 42ch; }
+
+  /* transcript — foldable, editable sections */
+  #pane-transcript { padding: 20px 22px; }
+  .tseg-hint { font-size: 12px; color: var(--text-3); margin: 0 0 14px; }
+  #transcript { display: flex; flex-direction: column; gap: 8px; }
+  .tseg { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); overflow: hidden; }
+  .tseg.note-seg { border-left: 2px solid var(--accent); }
+  .tseg-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 13px;
+    background: var(--surface); border: none; cursor: pointer; font: inherit; text-align: left;
+    color: var(--text); transition: background .12s; }
+  .tseg-head:hover { background: var(--surface-2); }
+  .tseg-head .chev { width: 14px; height: 14px; color: var(--text-3); flex: 0 0 auto; transition: transform .15s; }
+  .tseg.open .tseg-head .chev { transform: rotate(90deg); }
+  .tseg-title { font-weight: 600; font-size: 12.5px; flex: 0 0 auto; }
+  .tseg-prev { flex: 1 1 auto; min-width: 0; color: var(--text-3); font-size: 12.5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tseg-prev.muted { font-style: italic; }
+  .tseg-wc { flex: 0 0 auto; font-family: var(--m); font-size: 10.5px; color: var(--text-3); }
+  .tseg-head .pen { width: 14px; height: 14px; color: var(--text-3); flex: 0 0 auto; opacity: .5; }
+  .tseg-head:hover .pen { opacity: 1; color: var(--accent); }
+  .tseg-body { display: none; padding: 0 13px 13px; }
+  .tseg.open .tseg-body { display: block; }
+  .tseg-editlabel { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--accent);
+    font-weight: 500; margin: 0 0 7px; }
+  .tseg-editlabel .icon { width: 13px; height: 13px; }
+  .tseg-edit { width: 100%; box-sizing: border-box; min-height: 52px; border: 1.5px solid var(--border-2);
+    border-radius: 9px; background: var(--surface); color: var(--text); font-family: var(--m);
+    font-size: 13px; line-height: 1.7; padding: 10px 12px; resize: none; overflow: hidden; cursor: text; }
+  .tseg-edit:hover { border-color: var(--accent); }
+  .tseg-edit:focus { outline: none; border-color: var(--accent); background: var(--surface);
+    box-shadow: 0 0 0 3px var(--ring); }
+
+  /* specification (modern doc) */
+  .doc-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 22px; border-bottom: 1px solid var(--border); }
+  .doc-bar .stamp { font-family: var(--m); font-size: 11.5px; color: var(--text-3);
+    display: flex; align-items: center; gap: 8px; }
+  .doc-bar .stamp .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .sheet { max-width: 70ch; margin: 0 auto; padding: 26px 24px 40px; }
+  #spec { font-size: 14.5px; line-height: 1.72; color: var(--text); }
+  #spec h1 { font-size: 22px; font-weight: 700; letter-spacing: -.025em; margin: 0 0 16px;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  #spec h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-3); margin: 28px 0 8px; }
+  #spec h3 { font-size: 14.5px; font-weight: 600; margin: 18px 0 6px; }
+  #spec p { margin: 8px 0; color: var(--text); }
+  #spec ul, #spec ol { padding-left: 20px; margin: 8px 0; }
+  #spec li { margin: 5px 0; }
+  #spec li::marker { color: var(--text-3); }
+  #spec b { font-weight: 600; }
+  /* change highlights: diff-style gutter, one colour per recent revision (newest→oldest) */
+  #spec .chg { border-radius: 3px; }
+  #spec .chg0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); animation: chgin .7s ease; }
+  #spec .chg1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
+  #spec .chg2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
+  @keyframes chgin { from { background: #d7d7f9; } to { background: var(--accent-soft); } }
+  /* recency legend in the doc bar */
+  .doc-bar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .chg-legend { display: flex; align-items: center; gap: 11px; font-size: 11px; color: var(--text-3); }
+  .chg-legend .lg { display: flex; align-items: center; gap: 5px; }
+  .chg-legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+  .chg-legend .sw0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+  .chg-legend .sw1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
+  .chg-legend .sw2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
+  .chg-legend .lg-label { color: var(--text-2); font-weight: 500; }
+  .doc-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.primary .icon { color: #fff; }
+  .spec-edit { width: 100%; box-sizing: border-box; min-height: 52vh; border: 1.5px solid var(--border-2);
+    border-radius: 10px; background: var(--surface); color: var(--text); font-family: var(--m);
+    font-size: 13.5px; line-height: 1.75; padding: 16px 18px; resize: vertical; }
+  .spec-edit:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
+
+  /* questions */
+  #pane-questions { padding: 20px 22px; }
+  .q-intro { font-size: 13px; color: var(--text-2); margin: 0 0 18px; max-width: 64ch; line-height: 1.6; }
+  #questions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .q-sep { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-3); margin: 12px 2px 2px; }
+  .q-card { display: flex; gap: 12px; align-items: flex-start; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--r); padding: 13px 14px;
+    animation: fade .2s ease; transition: background .15s, border-color .15s; }
+  .q-card:hover { border-color: var(--border-2); }
+  .q-card.done { background: var(--surface-2); border-color: transparent; }
+  .qcheck { appearance: none; -webkit-appearance: none; flex: 0 0 auto; width: 19px; height: 19px;
+    margin-top: 1px; border: 1.5px solid var(--border-2); border-radius: 6px; background: var(--surface);
+    cursor: pointer; transition: background .12s, border-color .12s; position: relative; }
+  .qcheck:hover { border-color: var(--success); }
+  .qcheck:checked { background: var(--success); border-color: var(--success);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-size: 13px; background-position: center; background-repeat: no-repeat; }
+  .q-body { flex: 1 1 auto; min-width: 0; }
+  .q-text { font-size: 14px; line-height: 1.5; color: var(--text); }
+  .q-card.done .q-text { color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--border-2); }
+  .q-ans { margin-top: 9px; padding: 8px 11px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-s); font-size: 13px; color: var(--text-2); }
+  .q-card.done .q-ans { background: var(--surface); }
+  .q-ans .lbl { display: block; font-family: var(--m); font-size: 10px; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-3); margin-bottom: 3px; }
+  .q-tag { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; font-size: 11px;
+    font-weight: 500; padding: 3px 9px 3px 7px; border-radius: 999px; }
+  .q-tag .icon { width: 13px; height: 13px; }
+  .q-tag.ai { background: var(--accent-soft); color: var(--accent); }
+  .q-tag.user { background: var(--success-soft); color: var(--success); }
+
+  /* build modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(21,23,28,.45); z-index: 50;
+    display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade .15s ease; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l);
+    box-shadow: var(--sh-2); width: min(1000px, 100%); height: min(760px, 92vh); display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-weight: 600; font-size: 15px; }
+  .modal-status { display: flex; align-items: center; gap: 9px; padding: 11px 18px; font-size: 13px;
+    color: var(--text-2); border-bottom: 1px solid var(--border); font-family: var(--m); }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-2);
+    border-top-color: var(--accent); animation: spin .7s linear infinite; flex: 0 0 auto; }
+  .spin.done { animation: none; border: none; background: var(--success);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/14px no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/14px no-repeat; }
+  .spin.err { animation: none; border: none; background: var(--danger); border-radius: 50%; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .modal-body { flex: 1 1 auto; min-height: 0; position: relative; background: var(--surface-2); }
+  #buildFrame { width: 100%; height: 100%; border: none; background: #fff; }
+  .build-log { margin: 0; height: 100%; overflow: auto; padding: 16px 18px; font-family: var(--m);
+    font-size: 12px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; }
+
+  @media (max-width: 700px) {
+    .wave-wrap { display: none; }
+    .recorder { flex-wrap: wrap; }
+    .rec-actions { width: 100%; justify-content: space-between; }
+    main, .topbar { padding-left: 14px; padding-right: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12v2M8 8v8M12 5v14M16 8v8M20 12v2"/></svg></div>
+  <div class="brand">VAMPS</div>
+  <div class="right">
+    <span class="kv" id="sessionPill">session —</span>
+    <span class="kv">nova-3 · gpt-5.4-mini</span>
+  </div>
+</header>
+
+<main>
+  <!-- Recorder -->
+  <section class="recorder">
+    <button class="rec-btn" id="recBtn" aria-label="Start recording"></button>
+    <div class="rec-meta">
+      <div class="time" id="timer">00:00</div>
+      <div class="state" id="state"><span class="led"></span><span id="stateText">Ready</span></div>
+    </div>
+    <div class="wave-wrap"><canvas id="wave"></canvas></div>
+    <div class="rec-actions">
+      <span class="kbd" title="Press space to start or stop">Space</span>
+      <button class="btn" id="uploadBtn"></button>
+      <input type="file" id="fileInput" accept=".txt,.md,.markdown,.docx" hidden />
+      <label class="seg">seg<input type="number" id="segLen" value="60" min="5" max="60" />s</label>
+      <button class="btn subtle" id="clearBtn">Clear</button>
+    </div>
+  </section>
+
+  <!-- Workspace -->
+  <section class="panel">
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab active" data-tab="transcript" role="tab">Transcript <span class="count" id="wordBadge">0</span></button>
+      <button class="tab" data-tab="spec" role="tab">Specification <span class="tab-dot" id="specDot"></span></button>
+      <button class="tab" data-tab="questions" role="tab">Questions <span class="count" id="qBadge">0</span></button>
+    </div>
+
+    <div class="pane active" id="pane-transcript" role="tabpanel">
+      <p class="tseg-hint" id="tHint" hidden>Click a section to expand and edit it — saved edits re-run the spec.</p>
+      <div id="transcript"></div>
+    </div>
+
+    <div class="pane" id="pane-spec" role="tabpanel">
+      <div class="doc-bar">
+        <div class="doc-bar-left">
+          <span class="stamp" id="specStamp">Not started</span>
+          <span class="chg-legend" id="chgLegend" hidden>
+            <span class="lg-label">Changed in:</span>
+            <span class="lg"><i class="sw sw0"></i>latest revision</span>
+            <span class="lg"><i class="sw sw1"></i>previous</span>
+            <span class="lg"><i class="sw sw2"></i>earlier</span>
+          </span>
+        </div>
+        <div class="doc-actions">
+          <button class="btn" id="specEditBtn" disabled></button>
+          <button class="btn primary" id="specSaveBtn" hidden></button>
+          <button class="btn subtle" id="specCancelBtn" hidden>Cancel</button>
+          <button class="btn" id="buildBtn" disabled></button>
+          <button class="btn" id="exportBtn" disabled></button>
+        </div>
+      </div>
+      <div class="sheet">
+        <div id="spec"></div>
+        <textarea id="specEdit" class="spec-edit" spellcheck="false" hidden></textarea>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-questions" role="tabpanel">
+      <p class="q-intro">Points the model still needs cleared up. Check one once you've covered it — or let the model do it: when the conversation answers a question, it resolves it for you and notes the answer.</p>
+      <ul id="questions"></ul>
+    </div>
+  </section>
+</main>
+
+<!-- Prototype build modal -->
+<div class="modal-backdrop" id="buildModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Prototype from spec</div>
+      <div style="display:flex;gap:8px">
+        <a class="btn primary" id="buildOpen" target="_blank" rel="noopener" hidden></a>
+        <button class="btn subtle" id="buildClose">Close</button>
+      </div>
+    </div>
+    <div class="modal-status" id="buildStatus"><span class="spin" id="buildSpin"></span><span id="buildStatusText">Starting…</span></div>
+    <div class="modal-body">
+      <iframe id="buildFrame" title="Prototype preview" hidden></iframe>
+      <pre class="build-log" id="buildLog" hidden></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const ICON = {
+  mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2.5"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 8l5-5 5 5"/><path d="M12 3v13"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V2"/>',
+  clip: '<path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  spark: '<path d="M12 3l1.7 4.9L18.5 9.5 13.7 11 12 16l-1.7-5L5.5 9.5 10.3 8Z"/>',
+  file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  build: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>',
+  external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+};
+function svg(name, cls){ return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="${name==='spark'?'currentColor':'none'}">${ICON[name]}</svg>`; }
+
+const sessionId = 's' + Math.random().toString(36).slice(2, 8);
+$('sessionPill').textContent = 'session ' + sessionId;
+$('recBtn').innerHTML = svg('mic');
+$('uploadBtn').innerHTML = svg('upload') + 'Upload notes';
+$('exportBtn').innerHTML = svg('download') + 'Export Word';
+$('specEditBtn').innerHTML = svg('pencil') + 'Edit';
+$('specSaveBtn').innerHTML = svg('check') + 'Save';
+$('buildBtn').innerHTML = svg('build') + 'Build prototype';
+$('buildOpen').innerHTML = svg('external') + 'Open in new tab';
+
+let stream, recorder, chunks = [], seq = 0, recording = false;
+let segTimer, clockTimer, startedAt = 0;
+let segments = [], notes = [], questions = [], lastSpec = '';
+let specBusy = false, specDirty = false, specEditing = false;
+let specRev = 0;              // revision counter; 0 = the initial draft (baseline, not highlighted)
+const lineAge = new Map();    // normalized spec line -> the revision it last changed in
+let audioCtx, analyser, waveRAF, waveData;
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+const fmtTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+
+function setState(mode, msg){
+  $('stateText').textContent = msg;
+  $('state').className = 'state' + (mode==='rec' ? ' rec' : mode==='work' ? ' work' : '');
+}
+// Single source of truth for the pipeline status, by priority of what's happening.
+let transcribing = 0, idleLabel = 'Ready';
+function refreshStatus(){
+  if (specBusy)          setState('work', lastSpec ? 'Revising spec…' : 'Drafting spec…');
+  else if (transcribing) setState('work', transcribing > 1 ? `Transcribing ${transcribing} clips…` : 'Transcribing…');
+  else if (recording)    setState('rec',  'Listening');
+  else                   setState('idle', lastSpec ? 'Spec up to date' : idleLabel);
+}
+// Show a transient message (e.g. "nothing new to add"), then fall back to the real status.
+let flashTimer;
+function flashStatus(msg){
+  clearTimeout(flashTimer); setState(recording ? 'rec' : 'idle', msg);
+  flashTimer = setTimeout(refreshStatus, 2800);
+}
+
+// ---------- tabs ----------
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id==='pane-'+name));
+  if (name === 'spec') $('specDot').classList.remove('show');   // seen it, clear the cue
+}
+const activeTab = () => document.querySelector('.tab.active')?.dataset.tab;
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
+
+// ---------- waveform ----------
+function sizeCanvas(){
+  const c = $('wave'), dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect();
+  c.width = Math.max(1, r.width * dpr); c.height = Math.max(1, r.height * dpr);
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: r.width, h: r.height };
+}
+function drawIdle(){
+  const { ctx, w, h } = sizeCanvas(); ctx.clearRect(0,0,w,h);
+  ctx.strokeStyle = 'rgba(138,144,156,.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+}
+function drawWave(){
+  waveRAF = requestAnimationFrame(drawWave);
+  analyser.getByteTimeDomainData(waveData);
+  const { ctx, w, h } = sizeCanvas(); ctx.clearRect(0,0,w,h);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#E5484D'; ctx.lineJoin = 'round'; ctx.beginPath();
+  const step = w / waveData.length;
+  for (let i=0;i<waveData.length;i++){
+    const y = (waveData[i]/128) * (h/2);
+    i ? ctx.lineTo(i*step, y) : ctx.moveTo(0, y);
+  }
+  ctx.stroke();
+}
+function startWave(s){
+  try {
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024;
+    waveData = new Uint8Array(analyser.fftSize);
+    audioCtx.createMediaStreamSource(s).connect(analyser);
+    if (reduceMotion){ drawIdle(); } else { drawWave(); }
+  } catch(e){ drawIdle(); }
+}
+function stopWave(){ cancelAnimationFrame(waveRAF); if (audioCtx){ audioCtx.close(); audioCtx=null; } drawIdle(); }
+
+// ---------- recording ----------
+async function start(){
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(e){ alert('Microphone access is needed to record: ' + e.message); return; }
+  recording = true; seq = 0;
+  $('recBtn').classList.add('live'); $('recBtn').innerHTML = svg('stop');
+  $('recBtn').setAttribute('aria-label','Stop recording');
+  idleLabel = 'Ready'; refreshStatus(); startedAt = Date.now();
+  clockTimer = setInterval(()=> $('timer').textContent = fmtTime(Math.floor((Date.now()-startedAt)/1000)), 250);
+  startWave(stream); startSegment();
+}
+function startSegment(){
+  chunks = [];
+  recorder = new MediaRecorder(stream, { mimeType });
+  recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: mimeType });
+    if (recording) startSegment();
+    if (blob.size > 1200) upload(blob, seq++);
+  };
+  recorder.start();
+  const ms = Math.max(5, Math.min(60, +$('segLen').value || 15)) * 1000;
+  segTimer = setTimeout(()=> { if (recorder.state === 'recording') recorder.stop(); }, ms);
+}
+function stop(){
+  recording = false; clearTimeout(segTimer); clearInterval(clockTimer);
+  if (recorder && recorder.state === 'recording') recorder.stop();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stopWave();
+  $('recBtn').classList.remove('live'); $('recBtn').innerHTML = svg('mic');
+  $('recBtn').setAttribute('aria-label','Start recording');
+  idleLabel = 'Stopped'; refreshStatus();
+}
+
+async function upload(blob, s){
+  segments.push({ seq: s, text: '', pending: true }); renderTranscript();
+  const fd = new FormData();
+  fd.append('audio', blob, `seg${s}.webm`); fd.append('seq', s); fd.append('session', sessionId);
+  transcribing++; refreshStatus();
+  try {
+    const j = await (await fetch('/transcribe', { method:'POST', body: fd })).json();
+    const seg = segments.find(x=>x.seq===s);
+    if (seg) seg.pending = false;
+    if (j.ok){ if (seg) seg.text = j.text || ''; if ((j.text||'').trim()) scheduleSpec(); }
+    else if (seg){ seg.error = j.error || 'transcription failed'; }
+  } catch(e){ const seg = segments.find(x=>x.seq===s); if (seg){ seg.pending = false; seg.error = 'network error'; } }
+  transcribing--; renderTranscript(); refreshStatus();
+}
+
+const spokenTranscript = () => segments.slice().sort((a,b)=>a.seq-b.seq).map(s=>s.text).join(' ').trim();
+function fullMaterial(){
+  const n = notes.map(x => `[Uploaded notes: ${x.name}]\n${x.text}`).join('\n\n');
+  return [n, spokenTranscript()].filter(Boolean).join('\n\n').trim();
+}
+
+// Foldable, editable transcript sections. Newest is appended at the bottom.
+const expanded = new Set();   // keys currently open
+const touched = new Set();    // keys the user manually toggled (auto-collapse leaves these alone)
+const knownKeys = new Set();  // keys we've already created a section for
+let autoKey = null;           // the section we auto-expanded; collapses when a newer one arrives
+
+// A flat, ordered list of transcript items: uploaded notes first, then clips by sequence.
+function transcriptItems(){
+  const items = [];
+  notes.forEach((n, i) => items.push({ key: 'note-' + i, kind: 'note', title: 'Notes · ' + n.name }));
+  segments.slice().sort((a, b) => a.seq - b.seq)
+    .forEach((s, i) => items.push({ key: 'seg-' + s.seq, kind: 'seg', title: 'Section ' + (i + 1) }));
+  return items;
+}
+function refFor(key){
+  if (key.startsWith('note-')) return notes[+key.slice(5)];
+  const seq = +key.slice(4); return segments.find(s => s.seq === seq);
+}
+function textOf(ref){ return ref ? (ref.text || '') : ''; }
+
+function buildSection(item){
+  const sec = document.createElement('section');
+  sec.className = 'tseg' + (item.kind === 'note' ? ' note-seg' : '');
+  sec.dataset.key = item.key;
+  sec.innerHTML =
+    `<button class="tseg-head" type="button">
+       <svg class="icon chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6"/></svg>
+       <span class="tseg-title"></span><span class="tseg-prev"></span>
+       <span class="tseg-wc"></span>
+       <svg class="icon pen" viewBox="0 0 24 24" fill="none">${ICON.pencil}</svg>
+     </button>
+     <div class="tseg-body">
+       <div class="tseg-editlabel"><svg class="icon" viewBox="0 0 24 24" fill="none">${ICON.pencil}</svg>Edit this text — click out to re-run the spec</div>
+       <textarea class="tseg-edit" spellcheck="false"
+        placeholder="Empty — type to add context, or wait for transcription."></textarea></div>`;
+  sec.querySelector('.tseg-head').addEventListener('click', () => {
+    touched.add(item.key);
+    expanded.has(item.key) ? expanded.delete(item.key) : expanded.add(item.key);
+    sec.classList.toggle('open', expanded.has(item.key));
+    const ta = sec.querySelector('.tseg-edit');
+    if (expanded.has(item.key)) autoGrow(ta);
+  });
+  const ta = sec.querySelector('.tseg-edit');
+  ta.addEventListener('input', () => autoGrow(ta));
+  ta.addEventListener('change', () => {          // fires on blur only if the text actually changed
+    const ref = refFor(item.key); if (!ref) return;
+    if (ta.value === textOf(ref)) return;
+    ref.text = ta.value;
+    updatePreview(sec, ref);
+    flashStatus('Transcript edited — revising spec');
+    scheduleSpec();                               // re-send the corrected material to the model
+  });
+  return sec;
+}
+function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+function updatePreview(sec, ref){
+  const prev = sec.querySelector('.tseg-prev'), wc = sec.querySelector('.tseg-wc');
+  const t = textOf(ref).trim();
+  if (t){ prev.textContent = t.slice(0, 90); prev.classList.remove('muted'); wc.textContent = t.split(/\s+/).filter(Boolean).length + 'w'; return; }
+  wc.textContent = ''; prev.classList.add('muted');
+  prev.textContent = ref && ref.pending ? 'Transcribing…'
+    : ref && ref.error ? ('Failed — ' + ref.error)
+    : 'No speech detected — click to type';
+}
+function updateSection(sec, item){
+  const ref = refFor(item.key);
+  sec.querySelector('.tseg-title').textContent = item.title;
+  updatePreview(sec, ref);
+  const ta = sec.querySelector('.tseg-edit');
+  if (ta !== document.activeElement){ ta.value = textOf(ref); if (expanded.has(item.key)) autoGrow(ta); }
+  sec.classList.toggle('open', expanded.has(item.key));
+}
+
+function renderTranscript(){
+  const el = $('transcript'), items = transcriptItems();
+  $('tHint').hidden = items.length === 0;
+  if (!items.length){
+    el.innerHTML = `<div class="empty">${svg('mic')}<span>Hit record and start talking. Each clip becomes an editable section below and the spec redrafts itself — or upload existing notes to seed it.</span></div>`;
+    $('wordBadge').textContent = 0; return;
+  }
+  if (el.querySelector('.empty')) el.innerHTML = '';
+  // Resolve fold state first: a newly-arrived section auto-expands and collapses the previous auto one.
+  for (const item of items){
+    if (knownKeys.has(item.key)) continue;
+    knownKeys.add(item.key);
+    expanded.add(item.key);
+    if (autoKey && autoKey !== item.key && !touched.has(autoKey)) expanded.delete(autoKey);
+    autoKey = item.key;
+  }
+  const seen = new Set();
+  for (const item of items){
+    seen.add(item.key);
+    let sec = el.querySelector(`[data-key="${item.key}"]`);
+    if (!sec){ sec = buildSection(item); el.appendChild(sec); }
+    updateSection(sec, item);
+  }
+  [...el.children].forEach(c => { if (c.dataset && c.dataset.key && !seen.has(c.dataset.key)) c.remove(); });
+  $('wordBadge').textContent = spokenTranscript().split(/\s+/).filter(Boolean).length;
+}
+
+// ---------- auto spec ----------
+function scheduleSpec(){ if (!fullMaterial()) return; if (specBusy || specEditing){ specDirty = true; return; } generateSpec(); }
+async function generateSpec(){
+  const transcript = fullMaterial(); if (!transcript) return;
+  specBusy = true; specDirty = false; refreshStatus();
+  if (!lastSpec) $('spec').innerHTML = '<div class="empty"><span>Drafting…</span></div>';
+  let errored = false, noChange = false;
+  try {
+    const j = await (await fetch('/spec', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ transcript, previous_spec: lastSpec,
+        open_questions: questions.filter(q=>!q.done).map(q=>q.text),
+        resolved_questions: questions.filter(q=>q.done).map(q=>q.text) }) })).json();
+    if (j.ok){
+      // Record which lines changed in this revision, then colour the last 3 revisions by recency.
+      const prevLines = new Set(lastSpec.split('\n').map(l => l.trim()).filter(Boolean));
+      lastSpec = j.spec;
+      if (j.revised){
+        specRev++;
+        for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t && !prevLines.has(t)) lineAge.set(t, specRev); }
+      } else {                       // a fresh draft is the new baseline — clear change history
+        specRev = 0; lineAge.clear();
+        for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t) lineAge.set(t, 0); }
+      }
+      // tier 0 = this revision (newest), 1 = one ago, 2 = two ago; older/baseline = no highlight
+      const tierOf = ln => { const la = lineAge.get(ln.trim()); if (la == null || la < 1) return null; const d = specRev - la; return d <= 2 ? d : null; };
+      const el = $('spec'); el.innerHTML = mdToHtml(j.spec, tierOf);
+      const fresh = el.querySelectorAll('.chg0').length;   // blocks from THIS revision
+      $('chgLegend').hidden = el.querySelectorAll('.chg').length === 0;
+      noChange = j.revised && fresh === 0;
+      const tail = j.revised ? (fresh ? `${fresh} block${fresh>1?'s':''} changed` : 'no changes from that clip') : 'drafted';
+      $('specStamp').innerHTML = `<span class="live-dot"></span>${escapeHtml(j.model)} · ${j.latency_s}s · ${tail}`;
+      $('exportBtn').disabled = false; $('specEditBtn').disabled = false; $('buildBtn').disabled = false;
+      mergeQuestions(j.questions || [], j.answered || []);
+      const worthShowing = j.revised ? fresh > 0 : true;
+      if (worthShowing){
+        if (activeTab() !== 'spec') $('specDot').classList.add('show');   // flag it if you're elsewhere
+        else { const first = el.querySelector('.chg0');                   // you're here — jump to the newest change
+          if (first) first.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' }); }
+      }
+    } else {
+      errored = true; setState(recording ? 'rec' : 'idle', 'Spec error — retrying next segment');
+      if (!lastSpec) $('spec').innerHTML = `<div class="empty"><span>Couldn't draft the spec: ${escapeHtml(j.error)}</span></div>`;
+    }
+  } catch(e){
+    errored = true; setState(recording ? 'rec' : 'idle', 'Spec error — retrying next segment');
+    if (!lastSpec) $('spec').innerHTML = `<div class="empty"><span>Couldn't reach the server: ${escapeHtml(e.message)}</span></div>`;
+  }
+  specBusy = false;
+  if (!errored){ noChange && !specDirty ? flashStatus('Nothing new to add from that clip') : refreshStatus(); }
+  if (specDirty && !specEditing) generateSpec();
+}
+
+// ---------- edit the specification directly ----------
+function enterSpecEdit(){
+  if (!lastSpec || specEditing) return;
+  specEditing = true;
+  const ta = $('specEdit');
+  ta.value = lastSpec; $('spec').hidden = true; ta.hidden = false;
+  ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, window.innerHeight * 0.52) + 'px';
+  ta.focus();
+  $('specEditBtn').hidden = true; $('specSaveBtn').hidden = false; $('specCancelBtn').hidden = false;
+  $('exportBtn').disabled = true;
+  setState(recording ? 'rec' : 'idle', 'Editing spec — Save to keep your changes');
+}
+function exitSpecEdit(){
+  specEditing = false;
+  $('specEdit').hidden = true; $('spec').hidden = false;
+  $('specEditBtn').hidden = false; $('specSaveBtn').hidden = true; $('specCancelBtn').hidden = true;
+  $('exportBtn').disabled = !lastSpec;
+  if (specDirty){ generateSpec(); } else { refreshStatus(); }   // apply any clips that queued while editing
+}
+function saveSpecEdit(){
+  const v = $('specEdit').value.trim();
+  if (v && v !== lastSpec){
+    lastSpec = v;
+    // a manual rewrite becomes the new baseline — clear the change history so old highlights don't linger
+    specRev = 0; lineAge.clear();
+    for (const raw of lastSpec.split('\n')){ const t = raw.trim(); if (t) lineAge.set(t, 0); }
+    $('chgLegend').hidden = true;
+    $('spec').innerHTML = mdToHtml(lastSpec, null);
+    $('specStamp').innerHTML = `<span class="live-dot"></span>edited by you`;
+    flashStatus('Spec saved — future clips revise from your version');
+  }
+  exitSpecEdit();
+}
+
+// ---------- questions ----------
+function mergeQuestions(openList, answeredList){
+  const prev = new Map(questions.map(q => [q.text, q]));
+  const next = [], seen = new Set();
+  for (const a of answeredList){
+    if (!a.question || seen.has(a.question)) continue;
+    const ex = prev.get(a.question);
+    next.push({ text: a.question, done: true, source: (ex && ex.done && ex.source==='user') ? 'user' : 'ai', answer: a.answer || (ex && ex.answer) || '' });
+    seen.add(a.question);
+  }
+  for (const t of openList){
+    if (seen.has(t)) continue;
+    const ex = prev.get(t);
+    next.push({ text: t, done: ex ? ex.done : false, source: ex ? ex.source : 'user', answer: ex ? ex.answer : '' });
+    seen.add(t);
+  }
+  for (const q of questions){ if (!seen.has(q.text) && q.done){ next.push(q); seen.add(q.text); } }
+  questions = next; renderQuestions();
+}
+function renderQuestions(){
+  const ul = $('questions');
+  if (!questions.length){
+    ul.innerHTML = `<div class="empty">${svg('help')}<span>No open questions yet. As the meeting unfolds, anything the model needs clarified shows up here.</span></div>`;
+    setQBadge(0); return;
+  }
+  const open = questions.filter(q=>!q.done), done = questions.filter(q=>q.done), idxOf = q => questions.indexOf(q);
+  const tag = q => q.source==='ai'
+    ? `<span class="q-tag ai">${svg('spark')}Resolved by AI</span>`
+    : `<span class="q-tag user">${svg('check')}Resolved</span>`;
+  const card = q => `<li class="q-card ${q.done?'done':''}">
+    <input type="checkbox" class="qcheck" ${q.done?'checked':''} data-i="${idxOf(q)}" aria-label="Mark resolved" />
+    <div class="q-body">
+      <div class="q-text">${escapeHtml(q.text)}</div>
+      ${q.done && q.answer ? `<div class="q-ans"><span class="lbl">From the discussion</span>${escapeHtml(q.answer)}</div>` : ''}
+      ${q.done ? tag(q) : ''}
+    </div></li>`;
+  let html = open.map(card).join('');
+  if (done.length) html += `<div class="q-sep">Resolved · ${done.length}</div>` + done.map(card).join('');
+  ul.innerHTML = html; setQBadge(open.length);
+}
+function setQBadge(open){ const b = $('qBadge'); b.textContent = open; b.className = 'count' + (open>0 ? ' hot' : (questions.length ? ' ok' : '')); }
+$('questions').addEventListener('change', e => {
+  const cb = e.target.closest('.qcheck'); if (!cb) return;
+  const q = questions[+cb.dataset.i]; if (!q) return;
+  q.done = cb.checked; q.source = 'user'; if (!cb.checked) q.answer = ''; renderQuestions();
+});
+
+// ---------- upload ----------
+$('uploadBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  setState('work', 'Reading notes');
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const j = await (await fetch('/upload_notes', { method:'POST', body: fd })).json();
+    if (j.ok){ notes.push({ name: j.name, text: j.text }); renderTranscript(); scheduleSpec(); }
+    else { alert('Could not read that file: ' + (j.error||'unknown')); setState('idle','Ready'); }
+  } catch(err){ alert('Upload failed: ' + err.message); setState('idle','Ready'); }
+  e.target.value = '';
+};
+
+// ---------- build a prototype with Claude Code ----------
+let buildJob = null, buildTimer = null, buildShown = false;
+function setBuildStatus(text, mode){
+  $('buildStatusText').textContent = text;
+  $('buildSpin').className = 'spin' + (mode ? ' ' + mode : '');
+}
+function openBuildModal(){
+  buildShown = false;
+  $('buildModal').hidden = false;
+  $('buildFrame').hidden = true; $('buildFrame').src = 'about:blank';
+  $('buildLog').hidden = true; $('buildLog').textContent = '';
+  $('buildOpen').hidden = true; $('buildOpen').removeAttribute('href');
+  setBuildStatus('Sending the spec to Claude Code…');
+}
+function closeBuildModal(){
+  $('buildModal').hidden = true; clearTimeout(buildTimer); buildTimer = null;
+  $('buildFrame').src = 'about:blank';
+}
+function showPrototype(url){
+  if (buildShown) return; buildShown = true;
+  $('buildFrame').src = url; $('buildFrame').hidden = false;
+  $('buildOpen').href = url; $('buildOpen').hidden = false;
+}
+async function buildPrototype(){
+  if (!lastSpec) return;
+  openBuildModal();
+  try {
+    const j = await (await fetch('/build', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ spec: lastSpec }) })).json();
+    if (!j.ok){ setBuildStatus('Error: ' + (j.error||'could not start build'), 'err'); return; }
+    buildJob = j.job_id;
+    setBuildStatus('Claude Code is building your prototype…');
+    pollBuild();
+  } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); }
+}
+function pollBuild(){
+  clearTimeout(buildTimer);
+  buildTimer = setTimeout(async () => {
+    try {
+      const s = await (await fetch('/build/status/' + buildJob)).json();
+      if (!s.ok){ setBuildStatus('Build not found', 'err'); return; }
+      const secs = Math.round(s.elapsed_s);
+      if (s.status === 'running'){
+        setBuildStatus(`Claude Code is building your prototype… ${secs}s`);
+        if (s.app_url) showPrototype(s.app_url);   // preview as soon as index.html exists
+        pollBuild();
+      } else if (s.status === 'done'){
+        setBuildStatus(`Prototype ready · built in ${secs}s`, 'done');
+        showPrototype(s.app_url);
+      } else if (s.status === 'done_no_file'){
+        setBuildStatus('Claude Code finished but produced no index.html', 'err');
+        $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
+      } else {
+        setBuildStatus('Build failed', 'err');
+        $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
+      }
+    } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); }
+  }, 2500);
+}
+
+// ---------- helpers ----------
+function escapeHtml(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function mdToHtml(md, tierOf){
+  // tierOf(line) -> 0|1|2 (recency tier) or null; drives the change-highlight colour.
+  const chg = ln => { const t = tierOf ? tierOf(ln) : null; return t == null ? '' : ` class="chg chg${t}"`; };
+  const lines = (md||'').split('\n'); let html = '', inList = false;
+  const close = () => { if (inList){ html += '</ul>'; inList = false; } };
+  for (let ln of lines){
+    let t = escapeHtml(ln).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'), c = chg(ln);
+    if (/^#\s+/.test(ln)){ close(); html += `<h1${c}>`+t.replace(/^#\s+/,'')+'</h1>'; }
+    else if (/^##\s+/.test(ln)){ close(); html += `<h2${c}>`+t.replace(/^##\s+/,'')+'</h2>'; }
+    else if (/^###\s+/.test(ln)){ close(); html += `<h3${c}>`+t.replace(/^###\s+/,'')+'</h3>'; }
+    else if (/^\s*[-*]\s+/.test(ln)){ if(!inList){ html+='<ul>'; inList=true; } html += `<li${c}>`+t.replace(/^\s*[-*]\s+/,'')+'</li>'; }
+    else if (/^\s*\d+\.\s+/.test(ln)){ if(!inList){ html+='<ul>'; inList=true; } html += `<li${c}>`+t.replace(/^\s*\d+\.\s+/,'')+'</li>'; }
+    else if (t.trim()===''){ close(); }
+    else { close(); html += `<p${c}>`+t+'</p>'; }
+  }
+  close(); return html;
+}
+async function exportWord(){
+  if (!lastSpec) return;
+  $('exportBtn').disabled = true;
+  try {
+    const r = await fetch('/export', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ spec: lastSpec }) });
+    if (!r.ok) throw new Error('export failed');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href = url; a.download = 'functional-spec.docx';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  } catch(e){ alert('Export failed: ' + e.message); }
+  $('exportBtn').disabled = false;
+}
+
+// ---------- wire up ----------
+$('recBtn').onclick = () => recording ? stop() : start();
+$('exportBtn').onclick = exportWord;
+$('specEditBtn').onclick = enterSpecEdit;
+$('specSaveBtn').onclick = saveSpecEdit;
+$('specCancelBtn').onclick = exitSpecEdit;
+$('buildBtn').onclick = buildPrototype;
+$('buildClose').onclick = closeBuildModal;
+$('specEdit').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; });
+$('clearBtn').onclick = () => {
+  if (recording) stop();
+  if (specEditing) exitSpecEdit();
+  segments=[]; notes=[]; questions=[]; seq=0; lastSpec=''; specBusy=false; specDirty=false;
+  expanded.clear(); touched.clear(); knownKeys.clear(); autoKey=null; transcribing=0;
+  specRev=0; lineAge.clear(); $('chgLegend').hidden=true; $('specEditBtn').disabled=true; $('buildBtn').disabled=true;
+  $('spec').innerHTML=''; renderSpecEmpty(); $('specStamp').textContent='Not started';
+  $('exportBtn').disabled=true; $('timer').textContent='00:00'; $('specDot').classList.remove('show');
+  renderTranscript(); renderQuestions(); setState('idle', 'Ready');
+};
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){
+    e.preventDefault(); recording ? stop() : start();
+  }
+});
+function renderSpecEmpty(){ $('spec').innerHTML = `<div class="empty">${svg('file')}<span>The specification builds itself here as the meeting unfolds.</span></div>`; }
+
+// initial paint
+drawIdle(); renderTranscript(); renderQuestions(); renderSpecEmpty();
+window.addEventListener('resize', () => { if (!recording) drawIdle(); });
+</script>
+</body>
+</html>
