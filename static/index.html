@@ -360,7 +360,7 @@ function svg(name, cls){ return `<svg class="icon ${cls||''}" viewBox="0 0 24 24
 const sessionId = 's' + Math.random().toString(36).slice(2, 8);
 $('sessionPill').textContent = 'session ' + sessionId;
 $('recBtn').innerHTML = svg('mic');
-$('uploadBtn').innerHTML = svg('upload') + 'Upload notes';
+$('uploadBtn').innerHTML = svg('upload') + 'Upload files';
 $('exportBtn').innerHTML = svg('download') + 'Export Word';
 $('specEditBtn').innerHTML = svg('pencil') + 'Edit';
 $('specSaveBtn').innerHTML = svg('check') + 'Save';
@@ -574,7 +574,7 @@ function renderTranscript(){
   const el = $('transcript'), items = transcriptItems();
   $('tHint').hidden = items.length === 0;
   if (!items.length){
-    el.innerHTML = `<div class="empty">${svg('mic')}<span>Hit record and start talking. Each clip becomes an editable section below and the spec redrafts itself — or upload existing notes to seed it.</span></div>`;
+    el.innerHTML = `<div class="empty">${svg('mic')}<span>Hit record and start talking. Each clip becomes an editable section below and the spec redrafts itself — or upload existing files to seed it.</span></div>`;
     $('wordBadge').textContent = 0; return;
   }
   if (el.querySelector('.empty')) el.innerHTML = '';
@@ -734,7 +734,7 @@ $('questions').addEventListener('change', e => {
 $('uploadBtn').onclick = () => $('fileInput').click();
 $('fileInput').onchange = async (e) => {
   const file = e.target.files[0]; if (!file) return;
-  setState('work', 'Reading notes');
+  setState('work', 'Reading files');
   const fd = new FormData(); fd.append('file', file);
   try {
     const j = await (await fetch('/upload_notes', { method:'POST', body: fd })).json();

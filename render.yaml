@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vamps
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Render injects $PORT; the Dockerfile CMD binds 0.0.0.0:$PORT.
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false          # set in the Render dashboard (secret)
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: CLAUDE_CODE_OAUTH_TOKEN
+        sync: false          # your Claude Code subscription token (for /build)

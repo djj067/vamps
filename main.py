@@ -52,7 +52,8 @@ REC_DIR.mkdir(exist_ok=True)
 GEN_DIR = BASE_DIR / "generated"          # Claude Code writes prototypes here
 GEN_DIR.mkdir(exist_ok=True)
 
-# Path to the Claude Code CLI (falls back to PATH lookup at request time).
+# Claude Code CLI — runs headless to generate the prototype. Authenticates via
+# CLAUDE_CODE_OAUTH_TOKEN (inherited from the environment) against the CC plan.
 CLAUDE_BIN = shutil.which("claude") or "claude"
 
 client = OpenAI()  # reads OPENAI_API_KEY from env; used only for /spec
@@ -474,7 +475,7 @@ async def export(payload: dict):
     )
 
 
-# --- Prototype builder: hand the spec to Claude Code ------------------------
+# --- Prototype builder: hand the spec to the Claude Code CLI ----------------
 BUILD_PROMPT = """Read SPEC.md in this directory. Build a single, self-contained
 clickable PROTOTYPE in ONE file named index.html.
 
@@ -491,7 +492,11 @@ Requirements:
 
 @app.post("/build")
 async def build(payload: dict):
-    """Kick off a headless Claude Code run that turns the spec into a prototype."""
+    """Kick off a headless Claude Code run that turns the spec into a prototype.
+
+    Auth is via the CLI's own credentials — CLAUDE_CODE_OAUTH_TOKEN in the
+    environment (a Claude Code subscription token), inherited by the subprocess.
+    """
     spec_md = (payload.get("spec") or "").strip()
     if not spec_md:
         return JSONResponse(status_code=400, content={"ok": False, "error": "empty spec"})
@@ -503,7 +508,7 @@ async def build(payload: dict):
     log_path = out / "build.log"
 
     # File tools only (no Bash) + confined to this throwaway dir: even a spec with
-    # injected instructions can't run commands on the machine.
+    # injected instructions can't run commands on the host.
     cmd = [
         CLAUDE_BIN, "-p", BUILD_PROMPT,
         "--permission-mode", "acceptEdits",
