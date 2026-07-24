@@ -348,23 +348,35 @@ def _lf_import(flow_file: Path) -> str:
     return resp.json()["id"]
 
 
+def _lf_delete(flow_id: str) -> None:
+    with httpx.Client(timeout=30) as http:
+        http.delete(f"{LANGFLOW_URL}/api/v1/flows/{flow_id}", headers=_lf_headers())
+
+
 def _lf_flow_id(name: str) -> str:
-    """Resolve the flow id, self-healing if Langflow pruned the flow's edges.
+    """Resolve the flow id, self-healing if the flow is missing or edge-pruned.
 
     Langflow drops non-native edges on restart ("graph has vertices but no
-    edges"), which breaks the run. So we verify the stored flow still has edges
-    and re-import the JSON (which restores them) when it doesn't.
+    edges") and the id can go stale if a flow is deleted. `_lf_edge_count`
+    returns >0 (healthy), 0 (edges pruned), or -1 (flow gone). Anything not >0
+    means rebuild from the JSON, which restores a healthy flow.
     """
     flow_file = _FLOW_FILES.get(name)
-    fid = _FLOW_ID_CACHE.get(name) or _lf_find_id(name)
-    if fid and flow_file and _lf_edge_count(fid) == 0:
-        with httpx.Client(timeout=30) as http:      # edges pruned -> rebuild
-            http.delete(f"{LANGFLOW_URL}/api/v1/flows/{fid}", headers=_lf_headers())
-        fid = None
-    if not fid:
-        if not flow_file or not flow_file.exists():
-            raise RuntimeError(f"Langflow flow '{name}' not found and no JSON to import.")
-        fid = _lf_import(flow_file)
+
+    cached = _FLOW_ID_CACHE.get(name)
+    if cached and _lf_edge_count(cached) > 0:
+        return cached                       # cached and healthy
+
+    found = _lf_find_id(name)               # re-resolve by name
+    if found and _lf_edge_count(found) > 0:
+        _FLOW_ID_CACHE[name] = found
+        return found
+
+    if found:                               # exists but edgeless -> drop it
+        _lf_delete(found)
+    if not flow_file or not flow_file.exists():
+        raise RuntimeError(f"Langflow flow '{name}' not found and no JSON to import.")
+    fid = _lf_import(flow_file)             # rebuild from JSON (restores edges)
     _FLOW_ID_CACHE[name] = fid
     return fid
 
