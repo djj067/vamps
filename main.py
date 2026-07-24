@@ -310,10 +310,15 @@ def _lf_headers() -> dict:
     return h
 
 
-def _lf_flow_id(name: str) -> str:
-    """Resolve a flow's id by its display name (cached). Raises on miss."""
-    if name in _FLOW_ID_CACHE:
-        return _FLOW_ID_CACHE[name]
+# Flow name -> JSON file main.py (re)imports if the flow is missing or its edges
+# were pruned. Langflow drops non-native edges on restart, so we self-heal.
+_FLOW_FILES = {
+    LANGFLOW_SPEC_FLOW: BASE_DIR / "langflow_components" / "vamps_spec_api_flow.json",
+    LANGFLOW_BUILD_FLOW: BASE_DIR / "langflow_components" / "vamps_build_api_flow.json",
+}
+
+
+def _lf_find_id(name: str):
     with httpx.Client(timeout=30) as http:
         resp = http.get(f"{LANGFLOW_URL}/api/v1/flows/",
                         params={"get_all": "true", "header_flows": "true"},
@@ -323,9 +328,45 @@ def _lf_flow_id(name: str) -> str:
     flows = body.get("items", body) if isinstance(body, dict) else body
     for f in flows:
         if f.get("name") == name:
-            _FLOW_ID_CACHE[name] = f["id"]
             return f["id"]
-    raise RuntimeError(f"Langflow flow '{name}' not found. Import it and check the name.")
+    return None
+
+
+def _lf_edge_count(flow_id: str) -> int:
+    with httpx.Client(timeout=30) as http:
+        resp = http.get(f"{LANGFLOW_URL}/api/v1/flows/{flow_id}", headers=_lf_headers())
+    if resp.status_code != 200:
+        return -1
+    return len(((resp.json() or {}).get("data") or {}).get("edges", []))
+
+
+def _lf_import(flow_file: Path) -> str:
+    with httpx.Client(timeout=30) as http:
+        resp = http.post(f"{LANGFLOW_URL}/api/v1/flows/",
+                         headers=_lf_headers(), content=flow_file.read_bytes())
+    resp.raise_for_status()
+    return resp.json()["id"]
+
+
+def _lf_flow_id(name: str) -> str:
+    """Resolve the flow id, self-healing if Langflow pruned the flow's edges.
+
+    Langflow drops non-native edges on restart ("graph has vertices but no
+    edges"), which breaks the run. So we verify the stored flow still has edges
+    and re-import the JSON (which restores them) when it doesn't.
+    """
+    flow_file = _FLOW_FILES.get(name)
+    fid = _FLOW_ID_CACHE.get(name) or _lf_find_id(name)
+    if fid and flow_file and _lf_edge_count(fid) == 0:
+        with httpx.Client(timeout=30) as http:      # edges pruned -> rebuild
+            http.delete(f"{LANGFLOW_URL}/api/v1/flows/{fid}", headers=_lf_headers())
+        fid = None
+    if not fid:
+        if not flow_file or not flow_file.exists():
+            raise RuntimeError(f"Langflow flow '{name}' not found and no JSON to import.")
+        fid = _lf_import(flow_file)
+    _FLOW_ID_CACHE[name] = fid
+    return fid
 
 
 def _extract_run_json(resp_json: dict) -> dict:
