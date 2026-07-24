@@ -45,7 +45,7 @@
   .kv { font-family: var(--m); font-size: 11px; color: var(--text-3); background: var(--surface-2);
     border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
 
-  main { max-width: 1000px; margin: 0 auto; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
+  main { max-width: 1080px; margin: 0 auto; padding: 22px; display: flex; flex-direction: column; gap: 16px; }
 
   /* ---------- recorder ---------- */
   .recorder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-l);
@@ -149,7 +149,27 @@
   .doc-bar .stamp { font-family: var(--m); font-size: 11.5px; color: var(--text-3);
     display: flex; align-items: center; gap: 8px; }
   .doc-bar .stamp .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
-  .sheet { max-width: 70ch; margin: 0 auto; padding: 26px 24px 40px; }
+  /* Google-Docs-style layout: centered sheet + right-margin comment column */
+  .doc-wrap { position: relative; display: grid; grid-template-columns: minmax(0,1fr) 300px;
+    gap: 8px; padding: 0 14px; }
+  .sheet { max-width: 68ch; margin: 0 auto; padding: 26px 24px 40px; }
+  .comments { position: relative; }
+  .cmt { position: absolute; left: 4px; right: 4px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 11px; box-shadow: var(--sh-1); padding: 11px 12px; display: flex; gap: 9px;
+    align-items: flex-start; cursor: pointer; transition: box-shadow .15s, border-color .15s, transform .1s;
+    animation: fade .2s ease; }
+  .cmt:hover { box-shadow: var(--sh-2); border-color: var(--accent); }
+  .cmt-resolve { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border-2);
+    background: var(--surface); color: var(--text-3); display: grid; place-items: center; cursor: pointer;
+    padding: 0; transition: background .12s, border-color .12s, color .12s; }
+  .cmt-resolve:hover { border-color: var(--success); color: var(--success); background: var(--success-soft); }
+  .cmt-resolve .icon { width: 13px; height: 13px; }
+  .cmt-q { font-size: 13px; line-height: 1.5; color: var(--text); }
+  .cmt-a { margin-left: auto; }   /* spacer so question text wraps cleanly */
+  .comments-empty { position: absolute; top: 4px; left: 4px; right: 4px; font-size: 12px;
+    color: var(--text-3); font-style: italic; padding: 6px 2px; }
+  #spec .has-comment { border-bottom: 2px solid #EBB84A; cursor: pointer; }
+  #spec .has-comment.cmt-active { background: #FEF3C7; }
   #spec { font-size: 14.5px; line-height: 1.72; color: var(--text); }
   #spec h1 { font-size: 22px; font-weight: 700; letter-spacing: -.025em; margin: 0 0 16px;
     padding-bottom: 14px; border-bottom: 1px solid var(--border); }
@@ -167,15 +187,16 @@
   #spec .chg1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
   #spec .chg2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
   @keyframes chgin { from { background: #d7d7f9; } to { background: var(--accent-soft); } }
-  /* recency legend in the doc bar */
-  .doc-bar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .chg-legend { display: flex; align-items: center; gap: 11px; font-size: 11px; color: var(--text-3); }
-  .chg-legend .lg { display: flex; align-items: center; gap: 5px; }
-  .chg-legend .sw { width: 11px; height: 11px; border-radius: 3px; }
-  .chg-legend .sw0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
-  .chg-legend .sw1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
-  .chg-legend .sw2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
-  .chg-legend .lg-label { color: var(--text-2); font-weight: 500; }
+  /* fixed recency legend bubble (top-left, always visible while scrolling) */
+  .chg-bubble { position: fixed; left: 16px; top: 256px; z-index: 30; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--sh-2); padding: 10px 13px 11px; }
+  .chg-bubble-title { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--text-3); margin-bottom: 8px; }
+  .chg-bubble .lg { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); margin: 5px 0; }
+  .chg-bubble .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; }
+  .chg-bubble .sw0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+  .chg-bubble .sw1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
+  .chg-bubble .sw2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
   .doc-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn.primary:hover { background: var(--accent-hover); }
@@ -217,6 +238,23 @@
   .q-tag.ai { background: var(--accent-soft); color: var(--accent); }
   .q-tag.user { background: var(--success-soft); color: var(--success); }
 
+  /* usage tab */
+  #pane-usage { padding: 22px; }
+  .usage { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
+  .uhint { font-size: 12.5px; color: var(--text-2); margin: 0 0 2px; max-width: 66ch; line-height: 1.55; }
+  .ucard { border: 1px solid var(--border); border-radius: var(--r-l); background: var(--surface);
+    box-shadow: var(--sh-1); padding: 16px 18px; }
+  .uhead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 13px; flex-wrap: wrap; }
+  .utitle { font-weight: 600; font-size: 14px; }
+  .usub { font-family: var(--m); font-size: 11px; color: var(--text-3); }
+  .usub b { color: var(--text-2); font-weight: 500; }
+  .utiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+  .utile { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; }
+  .unum { font-family: var(--m); font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; color: var(--text); }
+  .ulabel { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+  .utotal { display: flex; align-items: baseline; gap: 9px; padding: 4px 2px; font-size: 13px; color: var(--text-2); }
+  .utotal b { font-family: var(--m); font-size: 22px; color: var(--text); font-variant-numeric: tabular-nums; }
+
   /* build modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(21,23,28,.45); z-index: 50;
     display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade .15s ease; }
@@ -252,10 +290,6 @@
 <header class="topbar">
   <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12v2M8 8v8M12 5v14M16 8v8M20 12v2"/></svg></div>
   <div class="brand">VAMPS</div>
-  <div class="right">
-    <span class="kv" id="sessionPill">session —</span>
-    <span class="kv">nova-3 · gpt-5.4-mini</span>
-  </div>
 </header>
 
 <main>
@@ -282,6 +316,7 @@
       <button class="tab active" data-tab="transcript" role="tab">Transcript <span class="count" id="wordBadge">0</span></button>
       <button class="tab" data-tab="spec" role="tab">Specification <span class="tab-dot" id="specDot"></span></button>
       <button class="tab" data-tab="questions" role="tab">Questions <span class="count" id="qBadge">0</span></button>
+      <button class="tab" data-tab="usage" role="tab">Usage</button>
     </div>
 
     <div class="pane active" id="pane-transcript" role="tabpanel">
@@ -291,15 +326,7 @@
 
     <div class="pane" id="pane-spec" role="tabpanel">
       <div class="doc-bar">
-        <div class="doc-bar-left">
-          <span class="stamp" id="specStamp">Not started</span>
-          <span class="chg-legend" id="chgLegend" hidden>
-            <span class="lg-label">Changed in:</span>
-            <span class="lg"><i class="sw sw0"></i>latest revision</span>
-            <span class="lg"><i class="sw sw1"></i>previous</span>
-            <span class="lg"><i class="sw sw2"></i>earlier</span>
-          </span>
-        </div>
+        <span class="stamp" id="specStamp">Not started</span>
         <div class="doc-actions">
           <button class="btn" id="specEditBtn" disabled></button>
           <button class="btn primary" id="specSaveBtn" hidden></button>
@@ -308,17 +335,30 @@
           <button class="btn" id="exportBtn" disabled></button>
         </div>
       </div>
-      <div class="sheet">
-        <div id="spec"></div>
-        <textarea id="specEdit" class="spec-edit" spellcheck="false" hidden></textarea>
+      <div class="doc-wrap" id="docWrap">
+        <div class="sheet">
+          <div id="spec"></div>
+          <textarea id="specEdit" class="spec-edit" spellcheck="false" hidden></textarea>
+        </div>
+        <div class="comments" id="comments"></div>
       </div>
     </div>
 
     <div class="pane" id="pane-questions" role="tabpanel">
-      <p class="q-intro">Points the model still needs cleared up. Check one once you've covered it — or let the model do it: when the conversation answers a question, it resolves it for you and notes the answer.</p>
+      <p class="q-intro">Every clarification the model has raised — open and resolved. Open ones also appear as comments next to the spec paragraph they're about. Check one once it's covered; the model auto-resolves questions the conversation answers.</p>
       <ul id="questions"></ul>
     </div>
+
+    <div class="pane" id="pane-usage" role="tabpanel"></div>
   </section>
+
+  <!-- Fixed legend bubble: what each change colour means (stays visible while scrolling) -->
+  <div class="chg-bubble" id="chgBubble" hidden>
+    <div class="chg-bubble-title">Recent changes</div>
+    <div class="lg"><i class="sw sw0"></i>latest revision</div>
+    <div class="lg"><i class="sw sw1"></i>previous</div>
+    <div class="lg"><i class="sw sw2"></i>earlier</div>
+  </div>
 </main>
 
 <!-- Prototype build modal -->
@@ -327,6 +367,8 @@
     <div class="modal-head">
       <div class="modal-title">Prototype from spec</div>
       <div style="display:flex;gap:8px">
+        <button class="btn subtle" id="buildStop" hidden>Stop</button>
+        <button class="btn" id="buildFresh" hidden>Start fresh</button>
         <a class="btn primary" id="buildOpen" target="_blank" rel="noopener" hidden></a>
         <button class="btn subtle" id="buildClose">Close</button>
       </div>
@@ -357,8 +399,7 @@ const ICON = {
 };
 function svg(name, cls){ return `<svg class="icon ${cls||''}" viewBox="0 0 24 24" fill="${name==='spark'?'currentColor':'none'}">${ICON[name]}</svg>`; }
 
-const sessionId = 's' + Math.random().toString(36).slice(2, 8);
-$('sessionPill').textContent = 'session ' + sessionId;
+const sessionId = 's' + Math.random().toString(36).slice(2, 8);   // still used to name recording uploads
 $('recBtn').innerHTML = svg('mic');
 $('uploadBtn').innerHTML = svg('upload') + 'Upload files';
 $('exportBtn').innerHTML = svg('download') + 'Export Word';
@@ -368,9 +409,12 @@ $('buildBtn').innerHTML = svg('build') + 'Build prototype';
 $('buildOpen').innerHTML = svg('external') + 'Open in new tab';
 
 let stream, recorder, chunks = [], seq = 0, recording = false;
-let segTimer, clockTimer, startedAt = 0;
+let segTimer, clockTimer, startedAt = 0, elapsedBefore = 0;   // elapsedBefore: seconds banked across pauses
 let segments = [], notes = [], questions = [], lastSpec = '';
 let specBusy = false, specDirty = false, specEditing = false;
+// session token usage: spec generation (OpenAI) + prototype builds (Claude Code)
+const usage = { spec: { calls: 0, prompt: 0, completion: 0, total: 0 },
+                build: { builds: 0, input: 0, output: 0, total: 0, cost: 0 } };
 let specRev = 0;              // revision counter; 0 = the initial draft (baseline, not highlighted)
 const lineAge = new Map();    // normalized spec line -> the revision it last changed in
 let audioCtx, analyser, waveRAF, waveData;
@@ -402,7 +446,17 @@ function flashStatus(msg){
 function showTab(name){
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id==='pane-'+name));
-  if (name === 'spec') $('specDot').classList.remove('show');   // seen it, clear the cue
+  if (name === 'spec'){
+    $('specDot').classList.remove('show');                      // seen it, clear the cue
+    requestAnimationFrame(() => { renderComments(); updateChgBubble(); });  // needs the pane visible to measure
+  } else {
+    $('chgBubble').hidden = true;
+  }
+  if (name === 'usage') renderUsage();
+}
+function updateChgBubble(){
+  const show = activeTab() === 'spec' && !specEditing && !!$('spec').querySelector('.chg');
+  $('chgBubble').hidden = !show;
 }
 const activeTab = () => document.querySelector('.tab.active')?.dataset.tab;
 $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
@@ -446,11 +500,11 @@ function stopWave(){ cancelAnimationFrame(waveRAF); if (audioCtx){ audioCtx.clos
 async function start(){
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch(e){ alert('Microphone access is needed to record: ' + e.message); return; }
-  recording = true; seq = 0;
+  recording = true;   // resume: keep seq and banked time so clips append, not overwrite
   $('recBtn').classList.add('live'); $('recBtn').innerHTML = svg('stop');
-  $('recBtn').setAttribute('aria-label','Stop recording');
-  idleLabel = 'Ready'; refreshStatus(); startedAt = Date.now();
-  clockTimer = setInterval(()=> $('timer').textContent = fmtTime(Math.floor((Date.now()-startedAt)/1000)), 250);
+  $('recBtn').setAttribute('aria-label','Pause recording');
+  refreshStatus(); startedAt = Date.now();
+  clockTimer = setInterval(()=> $('timer').textContent = fmtTime(elapsedBefore + Math.floor((Date.now()-startedAt)/1000)), 250);
   startWave(stream); startSegment();
 }
 function startSegment(){
@@ -468,12 +522,14 @@ function startSegment(){
 }
 function stop(){
   recording = false; clearTimeout(segTimer); clearInterval(clockTimer);
-  if (recorder && recorder.state === 'recording') recorder.stop();
+  elapsedBefore += Math.floor((Date.now() - startedAt) / 1000);   // bank elapsed time
+  $('timer').textContent = fmtTime(elapsedBefore);
+  if (recorder && recorder.state === 'recording') recorder.stop();  // uploads the final partial clip
   if (stream) stream.getTracks().forEach(t => t.stop());
   stopWave();
   $('recBtn').classList.remove('live'); $('recBtn').innerHTML = svg('mic');
-  $('recBtn').setAttribute('aria-label','Start recording');
-  idleLabel = 'Stopped'; refreshStatus();
+  $('recBtn').setAttribute('aria-label','Resume recording');
+  idleLabel = segments.length ? 'Paused' : 'Stopped'; refreshStatus();
 }
 
 async function upload(blob, s){
@@ -624,12 +680,14 @@ async function generateSpec(){
       const tierOf = ln => { const la = lineAge.get(ln.trim()); if (la == null || la < 1) return null; const d = specRev - la; return d <= 2 ? d : null; };
       const el = $('spec'); el.innerHTML = mdToHtml(j.spec, tierOf);
       const fresh = el.querySelectorAll('.chg0').length;   // blocks from THIS revision
-      $('chgLegend').hidden = el.querySelectorAll('.chg').length === 0;
       noChange = j.revised && fresh === 0;
       const tail = j.revised ? (fresh ? `${fresh} block${fresh>1?'s':''} changed` : 'no changes from that clip') : 'drafted';
       $('specStamp').innerHTML = `<span class="live-dot"></span>${escapeHtml(j.model)} · ${j.latency_s}s · ${tail}`;
       $('exportBtn').disabled = false; $('specEditBtn').disabled = false; $('buildBtn').disabled = false;
-      mergeQuestions(j.questions || [], j.answered || []);
+      mergeQuestions(j.questions || [], j.answered || []);   // repositions margin comments
+      updateChgBubble();
+      if (j.usage){ usage.spec.calls++; usage.spec.prompt += j.usage.prompt_tokens||0;
+        usage.spec.completion += j.usage.completion_tokens||0; usage.spec.total += j.usage.total_tokens||0; renderUsage(); }
       const worthShowing = j.revised ? fresh > 0 : true;
       if (worthShowing){
         if (activeTab() !== 'spec') $('specDot').classList.add('show');   // flag it if you're elsewhere
@@ -655,6 +713,7 @@ function enterSpecEdit(){
   specEditing = true;
   const ta = $('specEdit');
   ta.value = lastSpec; $('spec').hidden = true; ta.hidden = false;
+  $('comments').innerHTML = ''; $('chgBubble').hidden = true;   // no margin comments while editing
   ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, window.innerHeight * 0.52) + 'px';
   ta.focus();
   $('specEditBtn').hidden = true; $('specSaveBtn').hidden = false; $('specCancelBtn').hidden = false;
@@ -666,6 +725,7 @@ function exitSpecEdit(){
   $('specEdit').hidden = true; $('spec').hidden = false;
   $('specEditBtn').hidden = false; $('specSaveBtn').hidden = true; $('specCancelBtn').hidden = true;
   $('exportBtn').disabled = !lastSpec;
+  renderComments(); updateChgBubble();
   if (specDirty){ generateSpec(); } else { refreshStatus(); }   // apply any clips that queued while editing
 }
 function saveSpecEdit(){
@@ -675,7 +735,6 @@ function saveSpecEdit(){
     // a manual rewrite becomes the new baseline — clear the change history so old highlights don't linger
     specRev = 0; lineAge.clear();
     for (const raw of lastSpec.split('\n')){ const t = raw.trim(); if (t) lineAge.set(t, 0); }
-    $('chgLegend').hidden = true;
     $('spec').innerHTML = mdToHtml(lastSpec, null);
     $('specStamp').innerHTML = `<span class="live-dot"></span>edited by you`;
     flashStatus('Spec saved — future clips revise from your version');
@@ -683,37 +742,51 @@ function saveSpecEdit(){
   exitSpecEdit();
 }
 
-// ---------- questions ----------
+// ---------- questions as margin comments ----------
+// questions: [{text, anchor, done, source, answer}]. openList items are {question, anchor}.
 function mergeQuestions(openList, answeredList){
   const prev = new Map(questions.map(q => [q.text, q]));
   const next = [], seen = new Set();
   for (const a of answeredList){
     if (!a.question || seen.has(a.question)) continue;
     const ex = prev.get(a.question);
-    next.push({ text: a.question, done: true, source: (ex && ex.done && ex.source==='user') ? 'user' : 'ai', answer: a.answer || (ex && ex.answer) || '' });
+    next.push({ text: a.question, anchor: ex ? ex.anchor : '', done: true,
+      source: (ex && ex.done && ex.source === 'user') ? 'user' : 'ai', answer: a.answer || (ex && ex.answer) || '' });
     seen.add(a.question);
   }
-  for (const t of openList){
-    if (seen.has(t)) continue;
+  for (const item of openList){
+    const t = typeof item === 'string' ? item : (item.question || '');
+    const anchor = typeof item === 'string' ? '' : (item.anchor || '');
+    if (!t || seen.has(t)) continue;
     const ex = prev.get(t);
-    next.push({ text: t, done: ex ? ex.done : false, source: ex ? ex.source : 'user', answer: ex ? ex.answer : '' });
+    next.push({ text: t, anchor: anchor || (ex ? ex.anchor : ''),
+      done: ex ? ex.done : false, source: ex ? ex.source : 'user', answer: ex ? ex.answer : '' });
     seen.add(t);
   }
   for (const q of questions){ if (!seen.has(q.text) && q.done){ next.push(q); seen.add(q.text); } }
-  questions = next; renderQuestions();
+  questions = next;
+  refreshQuestions();
 }
+
+// Update both surfaces: the Questions tab (full history) and the spec margin comments.
+function refreshQuestions(){ renderQuestions(); renderComments(); }
+
+const _norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Full question history (open + resolved) in the Questions tab.
 function renderQuestions(){
   const ul = $('questions');
+  if (!ul) return;
   if (!questions.length){
-    ul.innerHTML = `<div class="empty">${svg('help')}<span>No open questions yet. As the meeting unfolds, anything the model needs clarified shows up here.</span></div>`;
+    ul.innerHTML = `<div class="empty">${svg('help')}<span>No questions yet. As the meeting unfolds, anything the model needs clarified shows up here.</span></div>`;
     setQBadge(0); return;
   }
-  const open = questions.filter(q=>!q.done), done = questions.filter(q=>q.done), idxOf = q => questions.indexOf(q);
-  const tag = q => q.source==='ai'
+  const open = questions.filter(q => !q.done), done = questions.filter(q => q.done), idxOf = q => questions.indexOf(q);
+  const tag = q => q.source === 'ai'
     ? `<span class="q-tag ai">${svg('spark')}Resolved by AI</span>`
     : `<span class="q-tag user">${svg('check')}Resolved</span>`;
-  const card = q => `<li class="q-card ${q.done?'done':''}">
-    <input type="checkbox" class="qcheck" ${q.done?'checked':''} data-i="${idxOf(q)}" aria-label="Mark resolved" />
+  const card = q => `<li class="q-card ${q.done ? 'done' : ''}">
+    <input type="checkbox" class="qcheck" ${q.done ? 'checked' : ''} data-i="${idxOf(q)}" aria-label="Mark resolved" />
     <div class="q-body">
       <div class="q-text">${escapeHtml(q.text)}</div>
       ${q.done && q.answer ? `<div class="q-ans"><span class="lbl">From the discussion</span>${escapeHtml(q.answer)}</div>` : ''}
@@ -721,14 +794,62 @@ function renderQuestions(){
     </div></li>`;
   let html = open.map(card).join('');
   if (done.length) html += `<div class="q-sep">Resolved · ${done.length}</div>` + done.map(card).join('');
-  ul.innerHTML = html; setQBadge(open.length);
+  ul.innerHTML = html;
+  setQBadge(open.length);
 }
-function setQBadge(open){ const b = $('qBadge'); b.textContent = open; b.className = 'count' + (open>0 ? ' hot' : (questions.length ? ' ok' : '')); }
+function setQBadge(open){ const b = $('qBadge'); if (!b) return; b.textContent = open; b.className = 'count' + (open>0 ? ' hot' : (questions.length ? ' ok' : '')); }
 $('questions').addEventListener('change', e => {
   const cb = e.target.closest('.qcheck'); if (!cb) return;
   const q = questions[+cb.dataset.i]; if (!q) return;
-  q.done = cb.checked; q.source = 'user'; if (!cb.checked) q.answer = ''; renderQuestions();
+  q.done = cb.checked; q.source = 'user'; if (!cb.checked) q.answer = '';
+  refreshQuestions();
 });
+
+// Margin comments — ONLY open questions that anchor to a real spec paragraph.
+// Unmatched/general questions live in the Questions tab, not floating at the bottom.
+function renderComments(){
+  const layer = $('comments'), spec = $('spec'), wrap = $('docWrap');
+  if (!layer || !wrap) return;
+  layer.innerHTML = '';
+  spec.querySelectorAll('.has-comment').forEach(el => { el.classList.remove('has-comment', 'cmt-active'); delete el.dataset.cmt; });
+  if (specEditing) return;
+  const open = questions.filter(q => !q.done);
+  if (!open.length) return;
+  // If the pane isn't visible yet, offsets are 0 — showTab re-runs this on entry.
+  const blocks = [...spec.querySelectorAll('h1, h2, h3, p, li')];
+  const originTop = layer.getBoundingClientRect().top;
+  const items = open.map(q => {
+    let block = null;
+    if (q.anchor){
+      const a = _norm(q.anchor);
+      block = blocks.find(b => !b.dataset.cmt && _norm(b.textContent).includes(a))
+           || blocks.find(b => _norm(b.textContent).includes(a));
+    }
+    if (block){ block.classList.add('has-comment'); block.dataset.cmt = '1'; }
+    return { q, block, top: block ? (block.getBoundingClientRect().top - originTop) : 0 };
+  }).filter(it => it.block)          // no anchor match → shown in the Questions tab only
+    .sort((x, y) => x.top - y.top);
+
+  let cursor = 0;
+  for (const it of items){
+    const card = document.createElement('div');
+    card.className = 'cmt';
+    const btn = document.createElement('button');
+    btn.className = 'cmt-resolve'; btn.title = 'Mark resolved'; btn.setAttribute('aria-label', 'Mark resolved');
+    btn.innerHTML = svg('check');
+    btn.onclick = (e) => { e.stopPropagation(); it.q.done = true; it.q.source = 'user'; refreshQuestions(); };
+    const body = document.createElement('div');
+    body.innerHTML = `<div class="cmt-q">${escapeHtml(it.q.text)}</div>`;
+    card.append(btn, body);
+    card.onmouseenter = () => it.block.classList.add('cmt-active');
+    card.onmouseleave = () => it.block.classList.remove('cmt-active');
+    card.onclick = () => it.block.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    layer.appendChild(card);
+    const top = Math.max(it.top, cursor);
+    card.style.top = top + 'px';
+    cursor = top + card.offsetHeight + 10;
+  }
+}
 
 // ---------- upload ----------
 $('uploadBtn').onclick = () => $('fileInput').click();
@@ -745,61 +866,87 @@ $('fileInput').onchange = async (e) => {
 };
 
 // ---------- build a prototype with Claude Code ----------
-let buildJob = null, buildTimer = null, buildShown = false;
+// One evolving prototype per session: rebuilds resume the same Claude Code session
+// and edit the existing index.html. "Start fresh" begins a new one.
+let buildJob = null, buildTimer = null, buildShown = false, buildCounted = false;
+let protoId = null, protoDone = false, buildResuming = false;
+function countBuildTokens(t){
+  if (!t || buildCounted) return;
+  buildCounted = true;
+  usage.build.builds++; usage.build.input += t.input||0; usage.build.output += t.output||0;
+  usage.build.total += t.total||0; usage.build.cost += t.cost_usd||0;
+  renderUsage();
+}
 function setBuildStatus(text, mode){
   $('buildStatusText').textContent = text;
   $('buildSpin').className = 'spin' + (mode ? ' ' + mode : '');
 }
-function openBuildModal(){
-  buildShown = false;
+function openBuildModal(resume){
+  buildShown = false; buildCounted = false; buildResuming = resume;
   $('buildModal').hidden = false;
   $('buildFrame').hidden = true; $('buildFrame').src = 'about:blank';
   $('buildLog').hidden = true; $('buildLog').textContent = '';
   $('buildOpen').hidden = true; $('buildOpen').removeAttribute('href');
+  $('buildStop').hidden = false;                       // running → can stop
+  $('buildFresh').hidden = true;
   setBuildStatus('Sending the spec to Claude Code…');
 }
+function endBuildControls(){ $('buildStop').hidden = true; $('buildFresh').hidden = !protoDone; }
 function closeBuildModal(){
   $('buildModal').hidden = true; clearTimeout(buildTimer); buildTimer = null;
   $('buildFrame').src = 'about:blank';
 }
 function showPrototype(url){
   if (buildShown) return; buildShown = true;
-  $('buildFrame').src = url; $('buildFrame').hidden = false;
-  $('buildOpen').href = url; $('buildOpen').hidden = false;
+  const bust = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();   // reused folder → bust cache
+  $('buildFrame').src = bust; $('buildFrame').hidden = false;
+  $('buildOpen').href = bust; $('buildOpen').hidden = false;
 }
-async function buildPrototype(){
+async function buildPrototype(fresh){
   if (!lastSpec) return;
-  openBuildModal();
+  if (fresh || !protoId){ protoId = 'proto-' + Math.random().toString(36).slice(2, 10); protoDone = false; }
+  const resume = protoDone;   // continue the existing prototype if one completed
+  openBuildModal(resume);
   try {
-    const j = await (await fetch('/build', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ spec: lastSpec }) })).json();
-    if (!j.ok){ setBuildStatus('Error: ' + (j.error||'could not start build'), 'err'); return; }
+    const j = await (await fetch('/build', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ spec: lastSpec, project_id: protoId, resume }) })).json();
+    if (!j.ok){ setBuildStatus('Error: ' + (j.error||'could not start build'), 'err'); endBuildControls(); return; }
     buildJob = j.job_id;
-    setBuildStatus('Claude Code is building your prototype…');
+    setBuildStatus(j.resumed ? 'Claude Code is updating your prototype…' : 'Claude Code is building your prototype…');
     pollBuild();
-  } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); }
+  } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); endBuildControls(); }
+}
+async function stopBuild(){
+  if (!buildJob) return;
+  clearTimeout(buildTimer); buildTimer = null;
+  setBuildStatus('Stopping… kept your last prototype', 'err');
+  try { await fetch('/build/cancel/' + buildJob, { method:'POST' }); } catch(e){}
+  endBuildControls();
 }
 function pollBuild(){
   clearTimeout(buildTimer);
   buildTimer = setTimeout(async () => {
     try {
       const s = await (await fetch('/build/status/' + buildJob)).json();
-      if (!s.ok){ setBuildStatus('Build not found', 'err'); return; }
+      if (!s.ok){ setBuildStatus('Build not found', 'err'); endBuildControls(); return; }
       const secs = Math.round(s.elapsed_s);
+      const verb = buildResuming ? 'updating' : 'building';
       if (s.status === 'running'){
-        setBuildStatus(`Claude Code is building your prototype… ${secs}s`);
-        if (s.app_url) showPrototype(s.app_url);   // preview as soon as index.html exists
+        setBuildStatus(`Claude Code is ${verb} your prototype… ${secs}s`);
         pollBuild();
       } else if (s.status === 'done'){
-        setBuildStatus(`Prototype ready · built in ${secs}s`, 'done');
-        showPrototype(s.app_url);
+        setBuildStatus(`Prototype ready · ${buildResuming ? 'updated' : 'built'} in ${secs}s`, 'done');
+        protoDone = true; showPrototype(s.app_url); countBuildTokens(s.tokens); endBuildControls();
       } else if (s.status === 'done_no_file'){
         setBuildStatus('Claude Code finished but produced no index.html', 'err');
         $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
+        countBuildTokens(s.tokens); endBuildControls();
       } else {
         setBuildStatus('Build failed', 'err');
         $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
+        endBuildControls();
       }
-    } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); }
+    } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); endBuildControls(); }
   }, 2500);
 }
 
@@ -841,15 +988,18 @@ $('exportBtn').onclick = exportWord;
 $('specEditBtn').onclick = enterSpecEdit;
 $('specSaveBtn').onclick = saveSpecEdit;
 $('specCancelBtn').onclick = exitSpecEdit;
-$('buildBtn').onclick = buildPrototype;
+$('buildBtn').onclick = () => buildPrototype(false);
+$('buildFresh').onclick = () => buildPrototype(true);
+$('buildStop').onclick = stopBuild;
 $('buildClose').onclick = closeBuildModal;
 $('specEdit').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; });
 $('clearBtn').onclick = () => {
   if (recording) stop();
   if (specEditing) exitSpecEdit();
-  segments=[]; notes=[]; questions=[]; seq=0; lastSpec=''; specBusy=false; specDirty=false;
+  segments=[]; notes=[]; questions=[]; seq=0; elapsedBefore=0; lastSpec=''; specBusy=false; specDirty=false;
   expanded.clear(); touched.clear(); knownKeys.clear(); autoKey=null; transcribing=0;
-  specRev=0; lineAge.clear(); $('chgLegend').hidden=true; $('specEditBtn').disabled=true; $('buildBtn').disabled=true;
+  specRev=0; lineAge.clear(); $('chgBubble').hidden=true; $('specEditBtn').disabled=true; $('buildBtn').disabled=true;
+  protoId=null; protoDone=false; $('comments').innerHTML='';
   $('spec').innerHTML=''; renderSpecEmpty(); $('specStamp').textContent='Not started';
   $('exportBtn').disabled=true; $('timer').textContent='00:00'; $('specDot').classList.remove('show');
   renderTranscript(); renderQuestions(); setState('idle', 'Ready');
@@ -861,9 +1011,42 @@ document.addEventListener('keydown', e => {
 });
 function renderSpecEmpty(){ $('spec').innerHTML = `<div class="empty">${svg('file')}<span>The specification builds itself here as the meeting unfolds.</span></div>`; }
 
+// ---------- usage ----------
+const nf = n => (n || 0).toLocaleString();
+function renderUsage(){
+  const el = $('pane-usage'); if (!el) return;
+  const s = usage.spec, b = usage.build, grand = s.total + b.total;
+  const cost = b.cost ? ('≈ $' + b.cost.toFixed(b.cost < 1 ? 3 : 2)) : '—';
+  const tile = (num, label) => `<div class="utile"><div class="unum">${num}</div><div class="ulabel">${label}</div></div>`;
+  el.innerHTML = `
+    <div class="usage">
+      <p class="uhint">Token usage for this session. Spec text is generated with OpenAI; prototypes are built with Claude Code — different models, tallied separately.</p>
+      <div class="ucard">
+        <div class="uhead"><span class="utitle">Specification generation</span>
+          <span class="usub">OpenAI · gpt-5.4-mini · <b>${s.calls}</b> call${s.calls===1?'':'s'}</span></div>
+        <div class="utiles">
+          ${tile(nf(s.prompt), 'Input tokens')}
+          ${tile(nf(s.completion), 'Output tokens')}
+          ${tile(nf(s.total), 'Total tokens')}
+        </div>
+      </div>
+      <div class="ucard">
+        <div class="uhead"><span class="utitle">Prototype build</span>
+          <span class="usub">Claude Code · <b>${b.builds}</b> build${b.builds===1?'':'s'}</span></div>
+        <div class="utiles">
+          ${tile(nf(b.input), 'Input tokens')}
+          ${tile(nf(b.output), 'Output tokens')}
+          ${tile(nf(b.total), 'Total tokens')}
+          ${tile(cost, 'Est. cost')}
+        </div>
+      </div>
+      <div class="utotal">Session total <b>${nf(grand)}</b> tokens</div>
+    </div>`;
+}
+
 // initial paint
-drawIdle(); renderTranscript(); renderQuestions(); renderSpecEmpty();
-window.addEventListener('resize', () => { if (!recording) drawIdle(); });
+drawIdle(); renderTranscript(); renderQuestions(); renderSpecEmpty(); renderUsage();
+window.addEventListener('resize', () => { if (!recording) drawIdle(); if (activeTab()==='spec') renderComments(); });
 </script>
 </body>
 </html>

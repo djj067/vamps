@@ -61,6 +61,9 @@ app = FastAPI(title="VAMPS")
 
 # In-memory registry of prototype build jobs: id -> {proc, dir, started}
 BUILD_JOBS: dict = {}
+# Prototype "projects": project_id -> {"dir": Path, "session_id": str|None}. Lets a
+# rebuild resume the same Claude Code session and edit the existing index.html.
+PROJECTS: dict = {}
 
 
 # The model returns a JSON object: {"spec": "<markdown>", "questions": [ ... ]}.
@@ -101,10 +104,16 @@ clarifying question. If a whole segment is irrelevant, leave the spec unchanged.
 You ALWAYS respond with a single JSON object with exactly these keys:
   "spec":      a Markdown string using EXACTLY this structure and headings:
 {SPEC_STRUCTURE}
-  "questions": an array of short, specific clarifying questions (strings) that
-               you, as the analyst, STILL need answered. These are things the
-               material leaves ambiguous. Keep each to one sentence. Do NOT
-               include a question here if the material already answers it.
+  "questions": an array of objects {{"question": <string>, "anchor": <string>}}
+               — the clarifying questions you, as the analyst, STILL need
+               answered (things the material leaves ambiguous). For each:
+                 - "question": one specific question, one sentence.
+                 - "anchor": a SHORT verbatim quote (a few words) copied EXACTLY
+                   from your "spec" markdown identifying the sentence or
+                   requirement the question is about, so it can be shown next to
+                   that text. Copy it word-for-word from the spec; if the
+                   question is general, use "".
+               Do NOT include a question already answered by the material.
                Return [] if nothing needs clarifying.
   "answered":  an array of objects {{"question": <string>, "answer": <string>,
                "evidence": <string>}}. Include a CURRENTLY OPEN QUESTION here
@@ -167,10 +176,24 @@ Respond with a single JSON object:
 {"results": [{"question": "<the exact question text>", "answered": true or false}]}"""
 
 
-def _verify_answers(candidates: list, transcript: str) -> list:
-    """Second-pass skeptic: keep only candidates the model confirms are truly answered."""
+def _usage_of(resp) -> dict:
+    """Extract OpenAI token usage from a chat-completions response, defensively."""
+    u = getattr(resp, "usage", None)
+    return {
+        "prompt_tokens": getattr(u, "prompt_tokens", 0) or 0,
+        "completion_tokens": getattr(u, "completion_tokens", 0) or 0,
+        "total_tokens": getattr(u, "total_tokens", 0) or 0,
+    }
+
+
+def _verify_answers(candidates: list, transcript: str):
+    """Second-pass skeptic: keep only candidates the model confirms are truly answered.
+
+    Returns (kept_list, usage_dict) so the caller can tally verification tokens.
+    """
+    zero = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     if not candidates:
-        return []
+        return [], zero
     listing = "\n\n".join(
         f'{i+1}. QUESTION: {c["question"]}\n   PROPOSED ANSWER: {c["answer"]}\n   EVIDENCE: "{c["evidence"]}"'
         for i, c in enumerate(candidates)
@@ -189,10 +212,10 @@ def _verify_answers(candidates: list, transcript: str) -> list:
             for r in data.get("results", [])
             if r.get("answered") is True
         }
-        return [c for c in candidates if _normalize(c["question"]) in confirmed]
+        return [c for c in candidates if _normalize(c["question"]) in confirmed], _usage_of(resp)
     except Exception:
         # On verifier failure, fall back to the evidence-checked candidates rather than crash.
-        return candidates
+        return candidates, zero
 
 
 def _normalize(s: str) -> str:
@@ -361,8 +384,18 @@ async def spec(payload: dict):
         )
         raw = resp.choices[0].message.content or "{}"
         data = json.loads(raw)
+        usage = _usage_of(resp)   # tally spec-generation tokens (+ verify pass below)
         spec_md = (data.get("spec") or "").strip()
-        questions = [str(q).strip() for q in (data.get("questions") or []) if str(q).strip()]
+        # Questions are objects {question, anchor}; anchor is a quote used to place
+        # the question next to the spec text it's about.
+        questions = []
+        for q in (data.get("questions") or []):
+            if isinstance(q, dict):
+                text, anchor = str(q.get("question", "")).strip(), str(q.get("anchor", "")).strip()
+            else:
+                text, anchor = str(q).strip(), ""
+            if text:
+                questions.append({"question": text, "anchor": anchor})
         # Auto-resolve a question only if (1) its verbatim evidence is really in the
         # material, and (2) a strict skeptic pass confirms it's genuinely answered.
         candidates = []
@@ -376,16 +409,20 @@ async def spec(payload: dict):
                     "answer": str(a.get("answer", "")).strip(),
                     "evidence": str(a.get("evidence", "")).strip(),
                 })
-        confirmed = _verify_answers(candidates, transcript)
+        confirmed, verify_usage = _verify_answers(candidates, transcript)
+        for k in usage:
+            usage[k] += verify_usage.get(k, 0)
         answered = [{"question": c["question"], "answer": c["answer"]} for c in confirmed]
         # Any candidate that failed either gate stays visible as an open question.
         answered_texts = {a["question"] for a in answered}
+        open_texts = {q["question"] for q in questions}
         for a in (data.get("answered") or []):
             if isinstance(a, dict):
                 q = str(a.get("question", "")).strip()
-                if q and q not in answered_texts and q not in questions:
-                    questions.append(q)
-        questions = [q for q in questions if q not in answered_texts]
+                if q and q not in answered_texts and q not in open_texts:
+                    questions.append({"question": q, "anchor": ""})
+                    open_texts.add(q)
+        questions = [q for q in questions if q["question"] not in answered_texts]
         return {
             "ok": True,
             "spec": spec_md,
@@ -395,6 +432,7 @@ async def spec(payload: dict):
             "latency_s": round(time.time() - t0, 2),
             "model": SPEC_MODEL,
             "transcript_chars": len(transcript),
+            "usage": usage,
         }
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
@@ -489,6 +527,19 @@ Requirements:
   meeting, not a finished product.
 - Create ONLY index.html. Do not create other files or run any commands."""
 
+BUILD_PROMPT_RESUME = """The functional specification in SPEC.md has been revised.
+UPDATE the existing index.html in this directory so it matches the revised spec.
+Change only what needs to change to reflect the update — keep the rest of the
+prototype intact. Edit index.html in place; do NOT rewrite it from scratch and do
+NOT create other files."""
+
+_TOOL_FLAGS = ["--permission-mode", "acceptEdits",
+               "--allowed-tools", "Write", "Edit", "Read", "MultiEdit"]
+
+
+def _safe_id(s: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_-]", "", s)[:40]
+
 
 @app.post("/build")
 async def build(payload: dict):
@@ -496,28 +547,43 @@ async def build(payload: dict):
 
     Auth is via the CLI's own credentials — CLAUDE_CODE_OAUTH_TOKEN in the
     environment (a Claude Code subscription token), inherited by the subprocess.
+    With resume=true and a known session, the CLI edits the existing index.html
+    instead of regenerating (faster, fewer tokens).
     """
     spec_md = (payload.get("spec") or "").strip()
     if not spec_md:
         return JSONResponse(status_code=400, content={"ok": False, "error": "empty spec"})
 
-    job_id = uuid.uuid4().hex[:8]
-    out = GEN_DIR / job_id
+    project_id = _safe_id(str(payload.get("project_id") or "")) or uuid.uuid4().hex[:8]
+    want_resume = bool(payload.get("resume"))
+    proj = PROJECTS.get(project_id)
+
+    out = GEN_DIR / project_id
     out.mkdir(parents=True, exist_ok=True)
     (out / "SPEC.md").write_text(spec_md, encoding="utf-8")
-    log_path = out / "build.log"
+    log_path, err_path = out / "build.log", out / "build.err"
+    index_path, backup_path = out / "index.html", out / ".index.backup.html"
 
-    # File tools only (no Bash) + confined to this throwaway dir: even a spec with
-    # injected instructions can't run commands on the host.
-    cmd = [
-        CLAUDE_BIN, "-p", BUILD_PROMPT,
-        "--permission-mode", "acceptEdits",
-        "--allowed-tools", "Write", "Edit", "Read", "MultiEdit",
-    ]
+    session_id = proj["session_id"] if proj else None
+    do_resume = bool(want_resume and session_id and index_path.exists())
+
+    backup = None
+    if do_resume:
+        # Protect the last-good prototype: restored if this run fails or is cancelled.
+        try:
+            shutil.copyfile(index_path, backup_path); backup = backup_path
+        except Exception:
+            backup = None
+        cmd = [CLAUDE_BIN, "--resume", session_id, "-p", BUILD_PROMPT_RESUME, "--output-format", "json", *_TOOL_FLAGS]
+    else:
+        cmd = [CLAUDE_BIN, "-p", BUILD_PROMPT, "--output-format", "json", *_TOOL_FLAGS]
+
+    job_id = uuid.uuid4().hex[:8]
     try:
-        log_f = open(log_path, "w", encoding="utf-8")
         proc = subprocess.Popen(
-            cmd, cwd=str(out), stdout=log_f, stderr=subprocess.STDOUT,
+            cmd, cwd=str(out),
+            stdout=open(log_path, "w", encoding="utf-8"),   # JSON result (usage/session_id)
+            stderr=open(err_path, "w", encoding="utf-8"),
             stdin=subprocess.DEVNULL,
         )
     except FileNotFoundError:
@@ -526,39 +592,108 @@ async def build(payload: dict):
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
 
-    BUILD_JOBS[job_id] = {"proc": proc, "dir": out, "log": log_path, "started": time.time()}
-    return {"ok": True, "job_id": job_id}
+    PROJECTS.setdefault(project_id, {"dir": out, "session_id": session_id})
+    PROJECTS[project_id]["dir"] = out
+    BUILD_JOBS[job_id] = {
+        "proc": proc, "dir": out, "log": log_path, "err": err_path, "started": time.time(),
+        "project_id": project_id, "backup": backup, "finalized": False,
+    }
+    return {"ok": True, "job_id": job_id, "project_id": project_id, "resumed": do_resume}
+
+
+def _build_tokens(stdout_text: str):
+    """Pull Claude Code token usage from its --output-format json result."""
+    try:
+        data = json.loads(stdout_text)
+    except Exception:
+        return None
+    u = data.get("usage") or {}
+    inp = (u.get("input_tokens", 0) or 0) + (u.get("cache_read_input_tokens", 0) or 0) \
+        + (u.get("cache_creation_input_tokens", 0) or 0)
+    out = u.get("output_tokens", 0) or 0
+    return {"input": inp, "output": out, "total": inp + out, "cost_usd": data.get("total_cost_usd")}
+
+
+def _finalize_build(job: dict, rc: int, index_ready: bool, stdout_text: str):
+    """Run once when a build ends: persist session on success, restore backup on failure."""
+    proj = PROJECTS.get(job["project_id"])
+    if rc == 0 and index_ready:
+        try:
+            sid = json.loads(stdout_text).get("session_id")
+        except Exception:
+            sid = None
+        if proj is not None and sid:
+            proj["session_id"] = sid           # future rebuilds resume from here
+        b = job.get("backup")
+        if b and b.exists():
+            b.unlink()                          # success — drop the safety copy
+    else:
+        b = job.get("backup")                   # failed — restore the last-good prototype
+        if b and b.exists():
+            try:
+                shutil.copyfile(b, job["dir"] / "index.html"); b.unlink()
+            except Exception:
+                pass
 
 
 @app.get("/build/status/{job_id}")
 def build_status(job_id: str):
-    """Poll a build job: running / done / error, with the app URL once ready."""
+    """Poll a build job: running / done / error, with the app URL and token usage once ready."""
     job = BUILD_JOBS.get(job_id)
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
     proc = job["proc"]
     rc = proc.poll()
     index_ready = (job["dir"] / "index.html").exists()
-    log = ""
-    try:
-        log = job["log"].read_text(encoding="utf-8", errors="replace")[-4000:]
-    except Exception:
-        pass
-    if rc is None:
-        status = "running"
-    elif rc == 0:
-        status = "done" if index_ready else "done_no_file"
-    else:
-        status = "error"
+
+    def _read(p):
+        try:
+            return p.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            return ""
+    stdout_text, err_text = _read(job["log"]), _read(job.get("err"))
+
+    tokens = None
+    if rc is not None:
+        tokens = _build_tokens(stdout_text)
+        if not job["finalized"]:
+            job["finalized"] = True
+            _finalize_build(job, rc, index_ready, stdout_text)
+            index_ready = (job["dir"] / "index.html").exists()   # may have been restored
+    status = "running" if rc is None else ("done" if (rc == 0 and index_ready)
+             else "done_no_file" if rc == 0 else "error")
     return {
         "ok": True,
         "status": status,
         "elapsed_s": round(time.time() - job["started"], 1),
         "index_ready": index_ready,
-        "app_url": f"/generated/{job_id}/index.html" if index_ready else None,
+        "app_url": f"/generated/{job['dir'].name}/index.html" if index_ready else None,
         "returncode": rc,
-        "log": log,
+        "tokens": tokens,
+        "log": (err_text or stdout_text)[-4000:],
     }
+
+
+@app.post("/build/cancel/{job_id}")
+def build_cancel(job_id: str):
+    """Stop a running build; the partial is discarded and the last-good prototype restored."""
+    job = BUILD_JOBS.get(job_id)
+    if not job:
+        return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
+    proc = job["proc"]
+    if proc.poll() is None:
+        try:
+            proc.terminate()
+        except Exception:
+            pass
+    b = job.get("backup")
+    if b and b.exists():
+        try:
+            shutil.copyfile(b, job["dir"] / "index.html"); b.unlink()
+        except Exception:
+            pass
+    job["finalized"] = True   # don't let status finalize it again (keeps last-completed session)
+    return {"ok": True, "cancelled": True}
 
 
 app.mount("/generated", StaticFiles(directory=GEN_DIR, html=True), name="generated")
