@@ -9,12 +9,14 @@ Flow:
 
 Everything is kept deliberately thin so the pipeline is easy to see and debug.
 """
+import asyncio
 import io
 import json
 import os
 import re
 import shutil
 import subprocess
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -45,6 +47,24 @@ TRANSCRIBE_KEYTERMS = [
 
 # --- Spec generation: OpenAI -------------------------------------------------
 SPEC_MODEL = os.getenv("SPEC_MODEL", "gpt-5.4-mini")
+
+# --- Langflow bridge ---------------------------------------------------------
+# When LANGFLOW_API_KEY is set, /spec and /build run through Langflow flows
+# instead of the inline logic below. /transcribe always stays direct (low latency
+# for live mic segments). Flows are resolved by display name via the Langflow API.
+LANGFLOW_URL = os.getenv("LANGFLOW_URL", "http://127.0.0.1:7860").rstrip("/")
+# Optional — only needed if the Langflow server enforces auth. For a local server
+# with auth disabled, leave it blank.
+LANGFLOW_API_KEY = os.getenv("LANGFLOW_API_KEY", "")
+LANGFLOW_SPEC_FLOW = os.getenv("LANGFLOW_SPEC_FLOW", "VAMPS Spec API")
+LANGFLOW_BUILD_FLOW = os.getenv("LANGFLOW_BUILD_FLOW", "VAMPS Build API")
+# The node ids inside the API flows (generate_flows.py) that tweaks target.
+LANGFLOW_SPEC_NODE = os.getenv("LANGFLOW_SPEC_NODE", "Spec-vsa")
+LANGFLOW_BUILD_NODE = os.getenv("LANGFLOW_BUILD_NODE", "Build-vba")
+# Claude Code can take several minutes on a full prototype; give it room.
+LANGFLOW_BUILD_TIMEOUT = int(os.getenv("LANGFLOW_BUILD_TIMEOUT", "900"))  # seconds
+# Flip the bridge on with LANGFLOW_ENABLED=true (no API key required locally).
+USE_LANGFLOW = os.getenv("LANGFLOW_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
 
 BASE_DIR = Path(__file__).parent
 REC_DIR = BASE_DIR / "recordings"
@@ -279,6 +299,79 @@ def _build_spec_messages(
     ]
 
 
+# --- Langflow client ---------------------------------------------------------
+_FLOW_ID_CACHE: dict = {}
+
+
+def _lf_headers() -> dict:
+    h = {"Content-Type": "application/json"}
+    if LANGFLOW_API_KEY:            # only sent when a key is configured
+        h["x-api-key"] = LANGFLOW_API_KEY
+    return h
+
+
+def _lf_flow_id(name: str) -> str:
+    """Resolve a flow's id by its display name (cached). Raises on miss."""
+    if name in _FLOW_ID_CACHE:
+        return _FLOW_ID_CACHE[name]
+    with httpx.Client(timeout=30) as http:
+        resp = http.get(f"{LANGFLOW_URL}/api/v1/flows/",
+                        params={"get_all": "true", "header_flows": "true"},
+                        headers=_lf_headers())
+    resp.raise_for_status()
+    body = resp.json()
+    flows = body.get("items", body) if isinstance(body, dict) else body
+    for f in flows:
+        if f.get("name") == name:
+            _FLOW_ID_CACHE[name] = f["id"]
+            return f["id"]
+    raise RuntimeError(f"Langflow flow '{name}' not found. Import it and check the name.")
+
+
+def _extract_run_json(resp_json: dict) -> dict:
+    """Pull the JSON string our Text Output emitted out of the /run envelope.
+
+    The envelope nests component results in different shapes across versions, so
+    we collect every candidate string and return the first that parses to a dict.
+    """
+    candidates = []
+
+    def walk(o):
+        if isinstance(o, str):
+            candidates.append(o)
+        elif isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    for out in resp_json.get("outputs", []):
+        walk(out.get("outputs", out))
+    for s in candidates:
+        s = s.strip()
+        if s.startswith("{"):
+            try:
+                d = json.loads(s)
+                if isinstance(d, dict) and ("spec" in d or "html" in d or "status" in d):
+                    return d
+            except Exception:
+                continue
+    raise RuntimeError("Could not find a JSON result in the Langflow response.")
+
+
+def _lf_run(name: str, input_value: str, tweaks: dict, timeout: float = 300) -> dict:
+    """POST to /api/v1/run/{flow_id} and return the parsed JSON result. Blocking."""
+    flow_id = _lf_flow_id(name)
+    payload = {"input_value": input_value, "input_type": "chat",
+               "output_type": "text", "tweaks": tweaks or {}}
+    with httpx.Client(timeout=timeout) as http:
+        resp = http.post(f"{LANGFLOW_URL}/api/v1/run/{flow_id}",
+                         headers=_lf_headers(), json=payload)
+    resp.raise_for_status()
+    return _extract_run_json(resp.json())
+
+
 @app.get("/")
 def index():
     # no-store so an edited UI always loads fresh (this app is under active iteration)
@@ -373,6 +466,23 @@ async def spec(payload: dict):
     open_qs = [str(q).strip() for q in (payload.get("open_questions") or []) if str(q).strip()]
     if not transcript:
         return JSONResponse(status_code=400, content={"ok": False, "error": "empty transcript"})
+
+    # Langflow path: run the spec flow and pass it straight back to the browser.
+    if USE_LANGFLOW:
+        t0 = time.time()
+        try:
+            tweaks = {LANGFLOW_SPEC_NODE: {
+                "previous_spec": previous_spec,
+                "resolved_questions": "\n".join(resolved),
+                "open_questions": "\n".join(open_qs),
+                "model": SPEC_MODEL,
+            }}
+            data = await asyncio.to_thread(_lf_run, LANGFLOW_SPEC_FLOW, transcript, tweaks)
+            data["latency_s"] = round(time.time() - t0, 2)
+            data["via"] = "langflow"
+            return data
+        except Exception as e:
+            return JSONResponse(status_code=502, content={"ok": False, "error": f"Langflow spec failed: {e}"})
 
     t0 = time.time()
     try:
@@ -541,6 +651,31 @@ def _safe_id(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]", "", s)[:40]
 
 
+def _lf_build_worker(job_id: str, project_id: str, spec_md: str, want_resume: bool, out: Path):
+    """Background thread: run the Langflow build flow, then serve the returned HTML.
+
+    The BuildPrototype component writes its own copy (and tracks session resume)
+    on the Langflow side; here we just persist the returned html so the existing
+    /generated static mount can serve it.
+    """
+    job = BUILD_JOBS[job_id]
+    try:
+        tweaks = {LANGFLOW_BUILD_NODE: {
+            "project_id": project_id, "resume": want_resume,
+            "timeout_s": LANGFLOW_BUILD_TIMEOUT,   # raise the component's CLI timeout
+        }}
+        # HTTP call must outlive the component's own timeout.
+        data = _lf_run(LANGFLOW_BUILD_FLOW, spec_md, tweaks, timeout=LANGFLOW_BUILD_TIMEOUT + 60)
+        html = data.get("html") or ""
+        if data.get("ok") and html and not job.get("cancelled"):
+            (out / "index.html").write_text(html, encoding="utf-8")
+        job["result"] = data
+    except Exception as e:
+        job["error"] = str(e)
+    finally:
+        job["done"] = True
+
+
 @app.post("/build")
 async def build(payload: dict):
     """Kick off a headless Claude Code run that turns the spec into a prototype.
@@ -556,6 +691,24 @@ async def build(payload: dict):
 
     project_id = _safe_id(str(payload.get("project_id") or "")) or uuid.uuid4().hex[:8]
     want_resume = bool(payload.get("resume"))
+
+    # Langflow path: run the build flow in a background thread (it blocks ~30-90s),
+    # keeping the same job_id + polling contract the browser already uses.
+    if USE_LANGFLOW:
+        out = GEN_DIR / project_id
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "SPEC.md").write_text(spec_md, encoding="utf-8")
+        job_id = uuid.uuid4().hex[:8]
+        job = {"mode": "langflow", "dir": out, "project_id": project_id,
+               "started": time.time(), "done": False, "result": None,
+               "error": None, "cancelled": False}
+        BUILD_JOBS[job_id] = job
+        t = threading.Thread(target=_lf_build_worker,
+                             args=(job_id, project_id, spec_md, want_resume, out), daemon=True)
+        job["thread"] = t
+        t.start()
+        return {"ok": True, "job_id": job_id, "project_id": project_id, "resumed": False}
+
     proj = PROJECTS.get(project_id)
 
     out = GEN_DIR / project_id
@@ -642,6 +795,31 @@ def build_status(job_id: str):
     job = BUILD_JOBS.get(job_id)
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
+
+    # Langflow-backed job: state lives on the background thread, not a subprocess.
+    if job.get("mode") == "langflow":
+        index_ready = (job["dir"] / "index.html").exists()
+        if not job["done"]:
+            status = "running"
+        elif job["error"]:
+            status = "error"
+        else:
+            data = job["result"] or {}
+            status = "done" if (data.get("ok") and index_ready) else \
+                     ("done_no_file" if data.get("returncode") == 0 else "error")
+        data = job.get("result") or {}
+        return {
+            "ok": True,
+            "status": status,
+            "elapsed_s": round(time.time() - job["started"], 1),
+            "index_ready": index_ready,
+            "app_url": f"/generated/{job['dir'].name}/index.html" if index_ready else None,
+            "returncode": data.get("returncode"),
+            "tokens": data.get("tokens"),
+            "resumed": data.get("resumed"),
+            "log": (job.get("error") or data.get("log") or "")[-4000:],
+        }
+
     proc = job["proc"]
     rc = proc.poll()
     index_ready = (job["dir"] / "index.html").exists()
@@ -680,6 +858,13 @@ def build_cancel(job_id: str):
     job = BUILD_JOBS.get(job_id)
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
+
+    # Langflow-backed job: we can't interrupt the in-flight HTTP run, but we flag
+    # it so the worker won't overwrite the last-good prototype when it returns.
+    if job.get("mode") == "langflow":
+        job["cancelled"] = True
+        return {"ok": True, "cancelled": True}
+
     proc = job["proc"]
     if proc.poll() is None:
         try:

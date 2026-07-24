@@ -1,0 +1,744 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-vsa",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "transcript",
+            "id": "Spec-vsa",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-vsa{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vsa\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-vsa{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "ChatInput-vsa",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153ChatInput\u0153, \u0153id\u0153: \u0153ChatInput-vsa\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "target": "Spec-vsa",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153transcript\u0153, \u0153id\u0153: \u0153Spec-vsa\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_spec_generator",
+            "id": "Spec-vsa",
+            "name": "result_json",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Out-vsa",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Spec-vsa{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Out-vsa{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Spec-vsa",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153vamps_spec_generator\u0153, \u0153id\u0153: \u0153Spec-vsa\u0153, \u0153name\u0153: \u0153result_json\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "target": "Out-vsa",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153Out-vsa\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-vsa",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "id": "ChatInput-vsa",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 100,
+          "y": 300
+        },
+        "positionAbsolute": {
+          "x": 100,
+          "y": 300
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      },
+      {
+        "data": {
+          "id": "Spec-vsa",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Turn a meeting transcript into a functional spec + clarifying questions (with a verified 'answered' pass).",
+            "display_name": "VAMPS Spec Generator",
+            "documentation": "https://github.com/djj067/vamps",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "file-text",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Spec (Markdown)",
+                "group_outputs": false,
+                "method": "build_spec_text",
+                "name": "spec_text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Full Result (Data)",
+                "group_outputs": false,
+                "method": "build_result",
+                "name": "result",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Full Result (JSON text)",
+                "group_outputs": false,
+                "method": "build_result_json",
+                "name": "result_json",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"\nVAMPS \u00b7 SpecGenerator \u2014 Langflow 1.7.3 custom component.\n\nPort of the FastAPI `/spec` endpoint. Turns a meeting transcript (plus any\nprior spec / open questions) into a functional-specification Markdown document,\na list of clarifying questions, and a list of questions the material now\nanswers. Answers pass two gates before they count as resolved:\n  1. their evidence quote must really appear in the material, and\n  2. a strict second-pass \"skeptic\" LLM call must confirm it.\n\nThe prompts and JSON contract are identical to the original backend so behaviour\nmatches one-to-one.\n\"\"\"\nimport json\nimport re\n\n# NOTE: keep these as flat, top-level imports. Langflow's flow loader exec's the\n# embedded component code and only binds imports found at module top level (it\n# also auto-falls-back langflow.* -> lfx.* on 1.7.x), so a try/except import\n# block would leave `Component` undefined when a flow is imported from JSON.\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, MessageTextInput, MultilineInput, Output, SecretStrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.message import Message\nfrom openai import OpenAI\n\n\n# --- Prompt contract (verbatim from the original backend) --------------------\nSPEC_STRUCTURE = \"\"\"# Functional Specification\n\n## 1. Meeting Summary\n2-4 sentences: who/what/why.\n\n## 2. Client Goals & Pain Points\nBulleted list.\n\n## 3. Proposed Solution / Scope\nWhat we will build or deliver.\n\n## 4. Functional Requirements\nNumbered list. Each item: a concrete, testable requirement.\n\n## 5. Non-Functional Requirements\nPerformance, security, compliance, etc. (only if mentioned or clearly implied.)\n\n## 6. Action Items\nWho does what next (use \"Unassigned\" if the transcript doesn't say).\"\"\"\n\nSPEC_SYSTEM = f\"\"\"You are a business analyst supporting a sales team. You turn\nthe raw material of a client meeting (a transcript that may contain\ntranscription errors, filler words and overlapping speakers, plus any\npre-existing notes) into a clear FUNCTIONAL SPECIFICATION.\n\nFIRST, filter the material. A real meeting transcript is full of content that is\nNOT about what to build: greetings and small talk, scheduling and logistics,\nside conversations, jokes, weather, off-topic tangents, people testing the mic,\nand unrelated chit-chat. IGNORE all of that. Base the specification ONLY on\ncontent relevant to the client's product, goals, needs, scope, and requirements.\nNever turn an off-topic remark into a requirement, an action item, or a\nclarifying question. If a whole segment is irrelevant, leave the spec unchanged.\n\nYou ALWAYS respond with a single JSON object with exactly these keys:\n  \"spec\":      a Markdown string using EXACTLY this structure and headings:\n{SPEC_STRUCTURE}\n  \"questions\": an array of objects {{\"question\": <string>, \"anchor\": <string>}}\n               \u2014 the clarifying questions you, as the analyst, STILL need\n               answered (things the material leaves ambiguous). For each:\n                 - \"question\": one specific question, one sentence.\n                 - \"anchor\": a SHORT verbatim quote (a few words) copied EXACTLY\n                   from your \"spec\" markdown identifying the sentence or\n                   requirement the question is about, so it can be shown next to\n                   that text. Copy it word-for-word from the spec; if the\n                   question is general, use \"\".\n               Do NOT include a question already answered by the material.\n               Return [] if nothing needs clarifying.\n  \"answered\":  an array of objects {{\"question\": <string>, \"answer\": <string>,\n               \"evidence\": <string>}}. Include a CURRENTLY OPEN QUESTION here\n               ONLY if the material EXPLICITLY answers it:\n                 - \"question\": the open question's exact text.\n                 - \"answer\": one sentence stating the answer.\n                 - \"evidence\": a SHORT quote copied WORD-FOR-WORD from the\n                   material that states the answer. Do NOT paraphrase, translate,\n                   summarise, or invent this quote \u2014 copy it verbatim.\n               A topic merely being MENTIONED is NOT the same as being answered.\n               If you would have to guess, infer, assume, or read between the\n               lines, DO NOT put it here \u2014 leave it in \"questions\". When in\n               doubt, leave the question open. Return [] if nothing is\n               explicitly resolved this turn.\n\nBe concrete. If something was not discussed, write \"Not discussed\" rather than\ninventing details. Do NOT put a questions section inside the spec markdown;\nclarifications belong only in \"questions\" / \"answered\".\"\"\"\n\nSPEC_USER_INITIAL = \"\"\"Produce the functional specification from the material below.\n\nMATERIAL:\n---\n{transcript}\n---\"\"\"\n\nSPEC_USER_REVISE = \"\"\"A functional specification already exists (below). NEW\nmaterial has since been transcribed. REVISE and extend the existing spec so it\nreflects everything now known \u2014 keep what still holds, correct what changed, and\nfold in the new details. Do not discard prior content just because it is not\nrepeated in the new material.\n\n{resolved_block}{open_block}EXISTING SPECIFICATION:\n---\n{previous_spec}\n---\n\nFULL MATERIAL SO FAR (includes the new transcript):\n---\n{transcript}\n---\"\"\"\n\nVERIFY_SYSTEM = \"\"\"You are a strict fact-checker for a business analyst. You are\ngiven a meeting transcript and candidate items, each with a QUESTION, a proposed\nANSWER, and an EVIDENCE quote. For each, decide whether the transcript\nEXPLICITLY and UNAMBIGUOUSLY answers the question.\n\nMark answered = false when ANY of these hold:\n  - the topic is only mentioned in passing;\n  - the speaker defers or hedges it (\"decide later\", \"not sure\", \"maybe\", \"we'll see\");\n  - answering would require guessing, inference, or assumption;\n  - the evidence quote does not, on its own, directly state the answer.\n\nBe conservative: if there is any doubt, answered = false.\n\nRespond with a single JSON object:\n{\"results\": [{\"question\": \"<the exact question text>\", \"answered\": true or false}]}\"\"\"\n\n\ndef _normalize(s: str) -> str:\n    \"\"\"Lowercase, strip punctuation, collapse whitespace \u2014 for grounding checks.\"\"\"\n    return re.sub(r\"\\s+\", \" \", re.sub(r\"[^a-z0-9 ]+\", \" \", s.lower())).strip()\n\n\ndef _evidence_supported(evidence: str, transcript: str) -> bool:\n    \"\"\"True only if the model's quote is actually present in the material.\"\"\"\n    ev = _normalize(evidence)\n    if len(ev) < 4:\n        return False\n    tx = _normalize(transcript)\n    if ev in tx:\n        return True\n    words = {w for w in ev.split() if len(w) > 3}\n    if not words:\n        return False\n    hits = sum(1 for w in words if w in tx)\n    return hits / len(words) >= 0.8\n\n\ndef _usage_of(resp) -> dict:\n    \"\"\"Extract OpenAI token usage from a chat-completions response, defensively.\"\"\"\n    u = getattr(resp, \"usage\", None)\n    return {\n        \"prompt_tokens\": getattr(u, \"prompt_tokens\", 0) or 0,\n        \"completion_tokens\": getattr(u, \"completion_tokens\", 0) or 0,\n        \"total_tokens\": getattr(u, \"total_tokens\", 0) or 0,\n    }\n\n\ndef _lines(raw: str) -> list:\n    \"\"\"Parse a newline- or JSON-array-encoded string into a clean list of strings.\"\"\"\n    raw = (raw or \"\").strip()\n    if not raw:\n        return []\n    if raw.startswith(\"[\"):\n        try:\n            arr = json.loads(raw)\n            return [str(x).strip() for x in arr if str(x).strip()]\n        except Exception:\n            pass\n    out = []\n    for ln in raw.splitlines():\n        s = re.sub(r\"^\\s*[-*]\\s+\", \"\", ln).strip()\n        if s:\n            out.append(s)\n    return out\n\n\nclass SpecGenerator(Component):\n    display_name = \"VAMPS Spec Generator\"\n    description = \"Turn a meeting transcript into a functional spec + clarifying questions (with a verified 'answered' pass).\"\n    documentation = \"https://github.com/djj067/vamps\"\n    icon = \"file-text\"\n    name = \"vamps_spec_generator\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"transcript\",\n            display_name=\"Transcript / Material\",\n            info=\"Full meeting transcript so far (plus any seed notes). This is the main input.\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"previous_spec\",\n            display_name=\"Previous Spec (optional)\",\n            info=\"Existing spec Markdown. If set, the component revises it instead of writing from scratch.\",\n            value=\"\",\n        ),\n        MultilineInput(\n            name=\"resolved_questions\",\n            display_name=\"Resolved Questions (optional)\",\n            info=\"One per line (or a JSON array). Questions already answered by the client \u2014 never re-raised.\",\n            value=\"\",\n        ),\n        MultilineInput(\n            name=\"open_questions\",\n            display_name=\"Open Questions (optional)\",\n            info=\"One per line (or a JSON array). Still-awaiting-answer questions carried over from a prior turn.\",\n            value=\"\",\n        ),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"Leave blank to use the OPENAI_API_KEY environment variable.\",\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"model\",\n            display_name=\"Model\",\n            value=\"gpt-5.4-mini\",\n        ),\n        BoolInput(\n            name=\"verify\",\n            display_name=\"Verify answers (2nd pass)\",\n            info=\"Run the strict skeptic pass before marking questions answered.\",\n            value=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"spec_text\", display_name=\"Spec (Markdown)\", method=\"build_spec_text\"),\n        Output(name=\"result\", display_name=\"Full Result (Data)\", method=\"build_result\"),\n        Output(name=\"result_json\", display_name=\"Full Result (JSON text)\", method=\"build_result_json\"),\n    ]\n\n    # --- internals -----------------------------------------------------------\n    def _client(self) -> OpenAI:\n        key = (self.openai_api_key or \"\").strip()\n        return OpenAI(api_key=key) if key else OpenAI()\n\n    def _build_messages(self, transcript, previous_spec, resolved, open_qs):\n        if previous_spec.strip():\n            resolved_block = \"\"\n            if resolved:\n                joined = \"\\n\".join(f\"- {q}\" for q in resolved)\n                resolved_block = (\n                    \"The following questions were already resolved by the client \u2014 \"\n                    \"treat them as answered and do NOT raise them again:\\n\"\n                    f\"{joined}\\n\\n\"\n                )\n            open_block = \"\"\n            if open_qs:\n                joined = \"\\n\".join(f\"- {q}\" for q in open_qs)\n                open_block = (\n                    \"CURRENTLY OPEN QUESTIONS (still awaiting an answer). If the \"\n                    \"latest material now answers any of these, move it into \"\n                    '\"answered\" with a one-sentence answer instead of repeating it:\\n'\n                    f\"{joined}\\n\\n\"\n                )\n            user = SPEC_USER_REVISE.format(\n                resolved_block=resolved_block,\n                open_block=open_block,\n                previous_spec=previous_spec,\n                transcript=transcript,\n            )\n        else:\n            user = SPEC_USER_INITIAL.format(transcript=transcript)\n        return [\n            {\"role\": \"system\", \"content\": SPEC_SYSTEM},\n            {\"role\": \"user\", \"content\": user},\n        ]\n\n    def _verify_answers(self, client, candidates, transcript):\n        zero = {\"prompt_tokens\": 0, \"completion_tokens\": 0, \"total_tokens\": 0}\n        if not candidates:\n            return [], zero\n        listing = \"\\n\\n\".join(\n            f'{i+1}. QUESTION: {c[\"question\"]}\\n   PROPOSED ANSWER: {c[\"answer\"]}\\n   EVIDENCE: \"{c[\"evidence\"]}\"'\n            for i, c in enumerate(candidates)\n        )\n        user = f\"TRANSCRIPT:\\n---\\n{transcript}\\n---\\n\\nCANDIDATES:\\n{listing}\"\n        try:\n            resp = client.chat.completions.create(\n                model=self.model,\n                messages=[{\"role\": \"system\", \"content\": VERIFY_SYSTEM}, {\"role\": \"user\", \"content\": user}],\n                temperature=0,\n                response_format={\"type\": \"json_object\"},\n            )\n            data = json.loads(resp.choices[0].message.content or \"{}\")\n            confirmed = {\n                _normalize(str(r.get(\"question\", \"\")))\n                for r in data.get(\"results\", [])\n                if r.get(\"answered\") is True\n            }\n            return [c for c in candidates if _normalize(c[\"question\"]) in confirmed], _usage_of(resp)\n        except Exception:\n            return candidates, zero\n\n    def _run(self) -> dict:\n        \"\"\"Compute once, memoize \u2014 so both outputs share one LLM round-trip.\"\"\"\n        if getattr(self, \"_computed\", None) is not None:\n            return self._computed\n\n        transcript = (self.transcript or \"\").strip()\n        previous_spec = (self.previous_spec or \"\").strip()\n        resolved = _lines(self.resolved_questions)\n        open_qs = _lines(self.open_questions)\n        if not transcript:\n            raise ValueError(\"SpecGenerator: transcript is empty.\")\n\n        client = self._client()\n        resp = client.chat.completions.create(\n            model=self.model,\n            messages=self._build_messages(transcript, previous_spec, resolved, open_qs),\n            temperature=0.3,\n            response_format={\"type\": \"json_object\"},\n        )\n        data = json.loads(resp.choices[0].message.content or \"{}\")\n        usage = _usage_of(resp)\n\n        spec_md = (data.get(\"spec\") or \"\").strip()\n        questions = []\n        for q in (data.get(\"questions\") or []):\n            if isinstance(q, dict):\n                text, anchor = str(q.get(\"question\", \"\")).strip(), str(q.get(\"anchor\", \"\")).strip()\n            else:\n                text, anchor = str(q).strip(), \"\"\n            if text:\n                questions.append({\"question\": text, \"anchor\": anchor})\n\n        candidates = []\n        for a in (data.get(\"answered\") or []):\n            if not isinstance(a, dict):\n                continue\n            q = str(a.get(\"question\", \"\")).strip()\n            if q and _evidence_supported(str(a.get(\"evidence\", \"\")), transcript):\n                candidates.append({\n                    \"question\": q,\n                    \"answer\": str(a.get(\"answer\", \"\")).strip(),\n                    \"evidence\": str(a.get(\"evidence\", \"\")).strip(),\n                })\n\n        if self.verify:\n            confirmed, verify_usage = self._verify_answers(client, candidates, transcript)\n        else:\n            confirmed, verify_usage = candidates, {\"prompt_tokens\": 0, \"completion_tokens\": 0, \"total_tokens\": 0}\n        for k in usage:\n            usage[k] += verify_usage.get(k, 0)\n\n        answered = [{\"question\": c[\"question\"], \"answer\": c[\"answer\"]} for c in confirmed]\n        answered_texts = {a[\"question\"] for a in answered}\n        open_texts = {q[\"question\"] for q in questions}\n        for a in (data.get(\"answered\") or []):\n            if isinstance(a, dict):\n                q = str(a.get(\"question\", \"\")).strip()\n                if q and q not in answered_texts and q not in open_texts:\n                    questions.append({\"question\": q, \"anchor\": \"\"})\n                    open_texts.add(q)\n        questions = [q for q in questions if q[\"question\"] not in answered_texts]\n\n        self._computed = {\n            \"ok\": True,\n            \"spec\": spec_md,\n            \"questions\": questions,\n            \"answered\": answered,\n            \"revised\": bool(previous_spec),\n            \"model\": self.model,\n            \"transcript_chars\": len(transcript),\n            \"usage\": usage,\n        }\n        return self._computed\n\n    # --- outputs -------------------------------------------------------------\n    def build_spec_text(self) -> Message:\n        result = self._run()\n        self.status = result[\"spec\"]\n        return Message(text=result[\"spec\"])\n\n    def build_result(self) -> Data:\n        result = self._run()\n        self.status = result\n        return Data(data=result)\n\n    def build_result_json(self) -> Message:\n        \"\"\"Full result as a JSON string \u2014 for server-to-server use over the run API.\"\"\"\n        result = self._run()\n        return Message(text=json.dumps(result))\n"
+              },
+              "model": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Model",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "model",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "gpt-5.4-mini"
+              },
+              "open_questions": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Open Questions (optional)",
+                "dynamic": false,
+                "info": "One per line (or a JSON array). Still-awaiting-answer questions carried over from a prior turn.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "open_questions",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "openai_api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "Leave blank to use the OPENAI_API_KEY environment variable.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "openai_api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "previous_spec": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Previous Spec (optional)",
+                "dynamic": false,
+                "info": "Existing spec Markdown. If set, the component revises it instead of writing from scratch.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "previous_spec",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "resolved_questions": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Resolved Questions (optional)",
+                "dynamic": false,
+                "info": "One per line (or a JSON array). Questions already answered by the client \u2014 never re-raised.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "resolved_questions",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "transcript": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Transcript / Material",
+                "dynamic": false,
+                "info": "Full meeting transcript so far (plus any seed notes). This is the main input.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "transcript",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "verify": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Verify answers (2nd pass)",
+                "dynamic": false,
+                "info": "Run the strict skeptic pass before marking questions answered.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "verify",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "vamps_spec_generator"
+        },
+        "id": "Spec-vsa",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 540,
+          "y": 260
+        },
+        "positionAbsolute": {
+          "x": 540,
+          "y": 260
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      },
+      {
+        "data": {
+          "id": "Out-vsa",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Sends text output via API.",
+            "display_name": "Text Output",
+            "documentation": "https://docs.langflow.org/text-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "type",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Text",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.io.text import TextComponent\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.message import Message\n\n\nclass TextOutputComponent(TextComponent):\n    display_name = \"Text Output\"\n    description = \"Sends text output via API.\"\n    documentation: str = \"https://docs.langflow.org/text-input-and-output\"\n    icon = \"type\"\n    name = \"TextOutput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Text to be passed as output.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        self.status = self.input_value\n        return message\n"
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Text to be passed as output.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "TextOutput"
+        },
+        "id": "Out-vsa",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 1020,
+          "y": 300
+        },
+        "positionAbsolute": {
+          "x": 1020,
+          "y": 300
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 0.6
+    }
+  },
+  "description": "Chat Input (transcript) -> Spec Generator -> Text Output (result JSON)",
+  "endpoint_name": "None",
+  "is_component": false,
+  "name": "VAMPS Spec API"
+}

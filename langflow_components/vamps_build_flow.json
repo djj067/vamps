@@ -1,0 +1,867 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-vbuild1",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "spec",
+            "id": "VampsBuild-vbuild1",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-vbuild1{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vbuild1\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-VampsBuild-vbuild1{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153VampsBuild-vbuild1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "ChatInput-vbuild1",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153ChatInput\u0153, \u0153id\u0153: \u0153ChatInput-vbuild1\u0153, \u0153name\u0153: \u0153message\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "target": "VampsBuild-vbuild1",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153spec\u0153, \u0153id\u0153: \u0153VampsBuild-vbuild1\u0153, \u0153inputTypes\u0153: [\u0153Message\u0153], \u0153type\u0153: \u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_build_prototype",
+            "id": "VampsBuild-vbuild1",
+            "name": "html",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-vbuild1",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-VampsBuild-vbuild1{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153VampsBuild-vbuild1\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-ChatOutput-vbuild1{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-vbuild1\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "selected": false,
+        "source": "VampsBuild-vbuild1",
+        "sourceHandle": "{\u0153dataType\u0153: \u0153vamps_build_prototype\u0153, \u0153id\u0153: \u0153VampsBuild-vbuild1\u0153, \u0153name\u0153: \u0153html\u0153, \u0153output_types\u0153: [\u0153Message\u0153]}",
+        "target": "ChatOutput-vbuild1",
+        "targetHandle": "{\u0153fieldName\u0153: \u0153input_value\u0153, \u0153id\u0153: \u0153ChatOutput-vbuild1\u0153, \u0153inputTypes\u0153: [\u0153Data\u0153, \u0153DataFrame\u0153, \u0153Message\u0153], \u0153type\u0153: \u0153other\u0153}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "ChatInput-vbuild1",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Chat Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "files": {
+                "_input_type": "FileInput",
+                "advanced": true,
+                "display_name": "Files",
+                "dynamic": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "files",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatInput"
+        },
+        "id": "ChatInput-vbuild1",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 100,
+          "y": 300
+        },
+        "positionAbsolute": {
+          "x": 100,
+          "y": 300
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      },
+      {
+        "data": {
+          "id": "VampsBuild-vbuild1",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Hand a spec to the Claude Code CLI (blocking) to generate/edit a single-file HTML prototype.",
+            "display_name": "VAMPS Build Prototype",
+            "documentation": "https://github.com/djj067/vamps",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "hammer",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "index.html (text)",
+                "group_outputs": false,
+                "method": "build_html",
+                "name": "html",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Build Result (Data)",
+                "group_outputs": false,
+                "method": "build_result",
+                "name": "result",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Build Result (JSON text)",
+                "group_outputs": false,
+                "method": "build_result_json",
+                "name": "result_json",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "claude_bin": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Claude Code binary",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "claude_bin",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "claude"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"\nVAMPS \u00b7 BuildPrototype \u2014 Langflow 1.7.3 custom component.\n\nPort of the FastAPI `/build` endpoint, simplified to a BLOCKING call (the\ncomponent runs the Claude Code CLI with subprocess.run and waits for it to\nfinish, instead of the original background-job + polling machinery).\n\nSession resume is preserved: a module-level registry maps a project_id to the\nlast successful Claude Code session, so a rebuild resumes that session and edits\nthe existing index.html in place rather than regenerating from scratch. The\nregistry lives for the life of the Langflow server process \u2014 same lifetime the\noriginal in-memory dict had.\n\nThe generated index.html is returned both as text (for direct rendering) and as\na path on disk. Langflow does not serve arbitrary static files, so whatever UI\ndrives the flow is responsible for displaying/hosting the returned HTML.\n\"\"\"\nimport json\nimport re\nimport shutil\nimport subprocess\nimport time\nimport uuid\nfrom pathlib import Path\n\n# Flat top-level imports required by Langflow's flow loader (see spec_generator.py).\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, IntInput, MultilineInput, Output, StrInput\nfrom langflow.schema.data import Data\nfrom langflow.schema.message import Message\n\n# Session state is persisted to a small file inside each project's directory\n# (see _SESSION_FILE). A module-level dict would NOT work here: Langflow re-exec's\n# the component code per run, so module globals reset \u2014 and annotated module-level\n# assignments are dropped by the flow loader entirely. A file survives both.\n_SESSION_FILE = \".vamps_session.json\"\n\n\nBUILD_PROMPT = \"\"\"Read SPEC.md in this directory. Build a single, self-contained\nclickable PROTOTYPE in ONE file named index.html.\n\nRequirements:\n- Everything inline in index.html: HTML + CSS + JavaScript. No external files,\n  no CDNs, no build step, no network calls.\n- Use realistic placeholder/mock data so the key screens and flows from the spec\n  are demonstrable by clicking around. This is a visual prototype, not a real\n  backend.\n- Keep it clean and simple \u2014 the goal is to show something at the end of a\n  meeting, not a finished product.\n- Create ONLY index.html. Do not create other files or run any commands.\"\"\"\n\nBUILD_PROMPT_RESUME = \"\"\"The functional specification in SPEC.md has been revised.\nUPDATE the existing index.html in this directory so it matches the revised spec.\nChange only what needs to change to reflect the update \u2014 keep the rest of the\nprototype intact. Edit index.html in place; do NOT rewrite it from scratch and do\nNOT create other files.\"\"\"\n\n_TOOL_FLAGS = [\"--permission-mode\", \"acceptEdits\",\n               \"--allowed-tools\", \"Write\", \"Edit\", \"Read\", \"MultiEdit\"]\n\n\ndef _safe_id(s: str) -> str:\n    return re.sub(r\"[^A-Za-z0-9_-]\", \"\", s)[:40]\n\n\ndef _build_tokens(stdout_text: str):\n    \"\"\"Pull Claude Code token usage from its --output-format json result.\"\"\"\n    try:\n        data = json.loads(stdout_text)\n    except Exception:\n        return None\n    u = data.get(\"usage\") or {}\n    inp = (u.get(\"input_tokens\", 0) or 0) + (u.get(\"cache_read_input_tokens\", 0) or 0) \\\n        + (u.get(\"cache_creation_input_tokens\", 0) or 0)\n    out = u.get(\"output_tokens\", 0) or 0\n    return {\"input\": inp, \"output\": out, \"total\": inp + out, \"cost_usd\": data.get(\"total_cost_usd\")}\n\n\nclass BuildPrototype(Component):\n    display_name = \"VAMPS Build Prototype\"\n    description = \"Hand a spec to the Claude Code CLI (blocking) to generate/edit a single-file HTML prototype.\"\n    documentation = \"https://github.com/djj067/vamps\"\n    icon = \"hammer\"\n    name = \"vamps_build_prototype\"\n\n    inputs = [\n        MultilineInput(\n            name=\"spec\",\n            display_name=\"Spec (Markdown)\",\n            info=\"The functional spec to build a prototype from. Written to SPEC.md.\",\n            required=True,\n        ),\n        StrInput(\n            name=\"project_id\",\n            display_name=\"Project ID\",\n            info=\"Stable id that ties rebuilds together for session resume. Blank = new random project each run.\",\n            value=\"\",\n        ),\n        BoolInput(\n            name=\"resume\",\n            display_name=\"Resume session (edit existing)\",\n            info=\"If a prior build for this project succeeded, resume it and edit the existing index.html.\",\n            value=True,\n        ),\n        StrInput(\n            name=\"output_root\",\n            display_name=\"Output Root Dir\",\n            info=\"Directory under which each project's folder (with SPEC.md + index.html) is created.\",\n            value=\"generated\",\n        ),\n        StrInput(\n            name=\"claude_bin\",\n            display_name=\"Claude Code binary\",\n            value=\"claude\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout_s\",\n            display_name=\"Timeout (seconds)\",\n            value=300,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"html\", display_name=\"index.html (text)\", method=\"build_html\"),\n        Output(name=\"result\", display_name=\"Build Result (Data)\", method=\"build_result\"),\n        Output(name=\"result_json\", display_name=\"Build Result (JSON text)\", method=\"build_result_json\"),\n    ]\n\n    @staticmethod\n    def _read_session(out: Path):\n        \"\"\"Return the last successful Claude Code session id for this project, if any.\"\"\"\n        try:\n            return json.loads((out / _SESSION_FILE).read_text(encoding=\"utf-8\")).get(\"session_id\")\n        except Exception:\n            return None\n\n    @staticmethod\n    def _write_session(out: Path, session_id: str) -> None:\n        try:\n            (out / _SESSION_FILE).write_text(json.dumps({\"session_id\": session_id}), encoding=\"utf-8\")\n        except Exception:\n            pass\n\n    def _run(self) -> dict:\n        if getattr(self, \"_computed\", None) is not None:\n            return self._computed\n\n        spec_md = (self.spec or \"\").strip()\n        if not spec_md:\n            raise ValueError(\"BuildPrototype: spec is empty.\")\n\n        claude_bin = shutil.which(self.claude_bin) or self.claude_bin\n        project_id = _safe_id(str(self.project_id or \"\")) or uuid.uuid4().hex[:8]\n\n        gen_root = Path(self.output_root or \"generated\")\n        gen_root.mkdir(parents=True, exist_ok=True)\n        out = gen_root / project_id\n        out.mkdir(parents=True, exist_ok=True)\n        (out / \"SPEC.md\").write_text(spec_md, encoding=\"utf-8\")\n\n        index_path, backup_path = out / \"index.html\", out / \".index.backup.html\"\n        session_id = self._read_session(out)\n        do_resume = bool(self.resume and session_id and index_path.exists())\n\n        backup = None\n        if do_resume:\n            try:\n                shutil.copyfile(index_path, backup_path)\n                backup = backup_path\n            except Exception:\n                backup = None\n            cmd = [claude_bin, \"--resume\", session_id, \"-p\", BUILD_PROMPT_RESUME,\n                   \"--output-format\", \"json\", *_TOOL_FLAGS]\n        else:\n            cmd = [claude_bin, \"-p\", BUILD_PROMPT, \"--output-format\", \"json\", *_TOOL_FLAGS]\n\n        self.log(f\"Building prototype for project '{project_id}' (resume={do_resume})\")\n        t0 = time.time()\n        try:\n            proc = subprocess.run(\n                cmd, cwd=str(out), stdin=subprocess.DEVNULL,\n                capture_output=True, text=True, timeout=int(self.timeout_s),\n            )\n            rc, stdout_text, err_text = proc.returncode, proc.stdout or \"\", proc.stderr or \"\"\n        except FileNotFoundError:\n            raise ValueError(f\"Claude Code CLI '{self.claude_bin}' not found on PATH.\")\n        except subprocess.TimeoutExpired:\n            rc, stdout_text, err_text = -1, \"\", f\"timed out after {self.timeout_s}s\"\n\n        index_ready = index_path.exists()\n        # Finalize: persist session on success, restore backup on failure.\n        if rc == 0 and index_ready:\n            try:\n                sid = json.loads(stdout_text).get(\"session_id\")\n            except Exception:\n                sid = None\n            if sid:\n                self._write_session(out, sid)   # future rebuilds resume from here\n            if backup and backup.exists():\n                backup.unlink()\n        else:\n            if backup and backup.exists():\n                try:\n                    shutil.copyfile(backup, index_path)\n                    backup.unlink()\n                except Exception:\n                    pass\n            index_ready = index_path.exists()\n\n        html = \"\"\n        if index_ready:\n            html = index_path.read_text(encoding=\"utf-8\", errors=\"replace\")\n\n        status = \"done\" if (rc == 0 and index_ready) else (\"done_no_file\" if rc == 0 else \"error\")\n        self._computed = {\n            \"ok\": rc == 0 and index_ready,\n            \"status\": status,\n            \"project_id\": project_id,\n            \"resumed\": do_resume,\n            \"returncode\": rc,\n            \"elapsed_s\": round(time.time() - t0, 1),\n            \"index_path\": str(index_path) if index_ready else None,\n            \"html\": html,\n            \"tokens\": _build_tokens(stdout_text),\n            \"log\": (err_text or stdout_text)[-4000:],\n        }\n        return self._computed\n\n    def build_html(self) -> Message:\n        result = self._run()\n        self.status = result[\"status\"]\n        return Message(text=result[\"html\"])\n\n    def build_result(self) -> Data:\n        result = self._run()\n        preview = dict(result)\n        preview.pop(\"html\", None)  # keep the status preview compact\n        self.status = preview\n        return Data(data=result)\n\n    def build_result_json(self) -> Message:\n        \"\"\"Full result (incl. generated html) as a JSON string \u2014 for the run API.\"\"\"\n        result = self._run()\n        return Message(text=json.dumps(result))\n"
+              },
+              "output_root": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Output Root Dir",
+                "dynamic": false,
+                "info": "Directory under which each project's folder (with SPEC.md + index.html) is created.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "output_root",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "generated"
+              },
+              "project_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Project ID",
+                "dynamic": false,
+                "info": "Stable id that ties rebuilds together for session resume. Blank = new random project each run.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "project_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "resume": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Resume session (edit existing)",
+                "dynamic": false,
+                "info": "If a prior build for this project succeeded, resume it and edit the existing index.html.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "resume",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "spec": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "copy_field": false,
+                "display_name": "Spec (Markdown)",
+                "dynamic": false,
+                "info": "The functional spec to build a prototype from. Written to SPEC.md.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "spec",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "timeout_s": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout (seconds)",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout_s",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "int",
+                "value": 300
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "vamps_build_prototype"
+        },
+        "id": "VampsBuild-vbuild1",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 560,
+          "y": 240
+        },
+        "positionAbsolute": {
+          "x": 560,
+          "y": 240
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      },
+      {
+        "data": {
+          "id": "ChatOutput-vbuild1",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "https://docs.langflow.org/chat-input-and-output",
+            "edited": false,
+            "field_order": [],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Message",
+                "group_outputs": false,
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean data before converting to string.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nimport orjson\nfrom fastapi.encoders import jsonable_encoder\n\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.helpers.data import safe_convert\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.schema.properties import Source\nfrom lfx.template.field.base import Output\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            advanced=True,\n            info=\"Whether to clean data before converting to string.\",\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Output Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, _, display_name, source_id = self.get_properties_from_source_component()\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message) and not self.is_connected_to_chat_input():\n            message = self.input_value\n            # Update message properties\n            message.text = text\n            # Preserve existing session_id from the incoming message if it exists\n            existing_session_id = message.session_id\n        else:\n            message = Message(text=text)\n            existing_session_id = None\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        # Preserve session_id from incoming message, or use component/graph session_id\n        message.session_id = (\n            self.session_id or existing_session_id or (self.graph.session_id if hasattr(self, \"graph\") else None) or \"\"\n        )\n        message.context_id = self.context_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n\n        # Store message if needed\n        if message.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _serialize_data(self, data: Data) -> str:\n        \"\"\"Serialize Data object to JSON string.\"\"\"\n        # Convert data.data to JSON-serializable format\n        serializable_data = jsonable_encoder(data.data)\n        # Serialize with orjson, enabling pretty printing with indentation\n        json_bytes = orjson.dumps(serializable_data, option=orjson.OPT_INDENT_2)\n        # Convert bytes to string and wrap in Markdown code blocks\n        return \"```json\\n\" + json_bytes.decode(\"utf-8\") + \"\\n```\"\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            clean_data: bool = getattr(self, \"clean_data\", False)\n            return \"\\n\".join([safe_convert(item, clean_data=clean_data) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return safe_convert(self.input_value)\n"
+              },
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Context ID",
+                "dynamic": false,
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "context_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "input_value",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "other",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "external_options": {},
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "toggle": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": true,
+                "type": "bool",
+                "value": true
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "ChatOutput"
+        },
+        "id": "ChatOutput-vbuild1",
+        "type": "genericNode",
+        "selected": false,
+        "dragging": false,
+        "width": 320,
+        "height": 360,
+        "position": {
+          "x": 1080,
+          "y": 300
+        },
+        "positionAbsolute": {
+          "x": 1080,
+          "y": 300
+        },
+        "measured": {
+          "width": 320,
+          "height": 360
+        }
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 0.6
+    }
+  },
+  "description": "Chat Input (spec) -> VAMPS Build Prototype -> Chat Output (index.html)",
+  "endpoint_name": "None",
+  "is_component": false,
+  "name": "VAMPS Build Flow"
+}
