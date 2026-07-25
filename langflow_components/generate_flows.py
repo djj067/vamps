@@ -30,11 +30,9 @@ from deepgram_transcribe import DeepgramTranscribe
 from notes_parser import NotesParser
 
 
-def _spaced(o):
-    return json.dumps(o, sort_keys=True, separators=(", ", ": ")).replace('"', "œ")
-
-
 def _compact(o):
+    # Handle strings MUST be compact (no spaces) to match the id Langflow's canvas
+    # computes for each handle; spaced strings make ReactFlow silently drop the edge.
     return json.dumps(o, sort_keys=True, separators=(",", ":")).replace('"', "œ")
 
 
@@ -75,8 +73,8 @@ def _to_frontend(d: dict, positions: dict) -> dict:
             "data": {"sourceHandle": sh, "targetHandle": th},
             "id": f"reactflow__edge-{s}{_compact(sh)}-{t}{_compact(th)}",
             "selected": False,
-            "source": s, "sourceHandle": _spaced(sh),
-            "target": t, "targetHandle": _spaced(th),
+            "source": s, "sourceHandle": _compact(sh),
+            "target": t, "targetHandle": _compact(th),
         })
     d["data"]["edges"] = new_edges
     return d
