@@ -98,6 +98,40 @@ def _build(name, description, nodes, edges, positions):
     return d
 
 
+def _set_field(flow, node_id, field, value):
+    """Bake a value into a node's template field (e.g. Spec Generator's provider)."""
+    for n in flow["data"]["nodes"]:
+        if n["id"] == node_id:
+            tmpl = n["data"]["node"]["template"]
+            if field in tmpl:
+                tmpl[field]["value"] = value
+    return flow
+
+
+def _full_pipeline(name, description, suffix, provider, model):
+    """Chat Input (transcript) -> Spec -> Build -> Chat Output (html) + spec text.
+
+    No Deepgram — Langflow can't take browser mic input, so the transcript is a
+    text/chat input. `provider` is baked onto the Spec node ('claude_cli' or
+    'openrouter').
+    """
+    ci, sp, bd, co, so = f"In-{suffix}", f"Spec-{suffix}", f"Build-{suffix}", f"Html-{suffix}", f"Spec-out-{suffix}"
+    flow = _build(
+        name, description,
+        [(ci, ChatInput()), (sp, SpecGenerator()), (bd, BuildPrototype()),
+         (co, ChatOutput()), (so, TextOutputComponent())],
+        [(ci, "message", sp, "transcript"),
+         (sp, "spec_text", bd, "spec"),
+         (sp, "spec_text", so, "input_value"),
+         (bd, "html", co, "input_value")],
+        {ci: (60, 300), sp: (440, 260), bd: (860, 140), co: (1280, 140), so: (860, 540)},
+    )
+    _set_field(flow, sp, "provider", provider)
+    if model:
+        _set_field(flow, sp, "model", model)
+    return flow
+
+
 def main():
     # --- spec flow ---
     spec_flow = _build(
@@ -203,6 +237,23 @@ def main():
     )
     (HERE / "vamps_build_api_flow.json").write_text(json.dumps(build_api, indent=2))
     print("wrote vamps_build_api_flow.json")
+
+    # --- two full drag-in flows for the canvas/Playground (no Deepgram) ---
+    claude_full = _full_pipeline(
+        "VAMPS Full (Claude)",
+        "Transcript -> Spec (Claude CLI) -> Build Prototype -> HTML + spec. Testing: uses local Claude auth.",
+        "fc", provider="claude_cli", model="",
+    )
+    (HERE / "vamps_full_claude.json").write_text(json.dumps(claude_full, indent=2))
+    print("wrote vamps_full_claude.json")
+
+    openrouter_full = _full_pipeline(
+        "VAMPS Full (OpenRouter)",
+        "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Demo: needs OPENROUTER_API_KEY.",
+        "fo", provider="openrouter", model="anthropic/claude-3.5-sonnet",
+    )
+    (HERE / "vamps_full_openrouter.json").write_text(json.dumps(openrouter_full, indent=2))
+    print("wrote vamps_full_openrouter.json")
 
 
 if __name__ == "__main__":
