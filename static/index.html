@@ -942,7 +942,7 @@ function renderComments(){
   // column title (matches the spec heading) — always shown so the column is labelled
   const title = document.createElement('div');
   title.className = 'comments-title';
-  title.innerHTML = `Clarifications${open.length ? ` <span class="ct-count">${open.length}</span>` : ''}`;
+  title.innerHTML = `Questions${open.length ? ` <span class="ct-count">${open.length}</span>` : ''}`;
   layer.appendChild(title);
   const titleH = title.offsetTop + title.offsetHeight + 12;   // title sits at top:26px
   if (!open.length){
