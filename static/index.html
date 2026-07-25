@@ -412,9 +412,24 @@ let stream, recorder, chunks = [], seq = 0, recording = false;
 let segTimer, clockTimer, startedAt = 0, elapsedBefore = 0;   // elapsedBefore: seconds banked across pauses
 let segments = [], notes = [], questions = [], lastSpec = '';
 let specBusy = false, specDirty = false, specEditing = false;
-// session token usage: spec generation (OpenAI) + prototype builds (Claude Code)
+// session token usage: spec generation (Claude) + prototype builds (Claude Code)
 const usage = { spec: { calls: 0, prompt: 0, completion: 0, total: 0 },
                 build: { builds: 0, input: 0, output: 0, total: 0, cost: 0 } };
+// which model is in use + live OpenRouter credit (demo mode)
+let usageMeta = { provider:'', spec_label:'Claude', spec_model:'', build_label:'Claude Code', openrouter:null, openrouter_error:null };
+let orUsagePrev = null;   // last cumulative OpenRouter spend, to diff per run
+let orLastRun = null;     // credits spent in the most recent run
+async function refreshUsageMeta(){
+  try {
+    const j = await (await fetch('/usage')).json();
+    usageMeta = Object.assign({}, usageMeta, j);
+    if (j.openrouter && typeof j.openrouter.usage === 'number'){
+      if (orUsagePrev !== null){ const d = j.openrouter.usage - orUsagePrev; if (d > 1e-9) orLastRun = d; }
+      orUsagePrev = j.openrouter.usage;
+    }
+    renderUsage();
+  } catch(e){ /* ignore */ }
+}
 let specRev = 0;              // revision counter; 0 = the initial draft (baseline, not highlighted)
 const lineAge = new Map();    // normalized spec line -> the revision it last changed in
 let audioCtx, analyser, waveRAF, waveData;
@@ -452,7 +467,7 @@ function showTab(name){
   } else {
     $('chgBubble').hidden = true;
   }
-  if (name === 'usage') renderUsage();
+  if (name === 'usage') { renderUsage(); refreshUsageMeta(); }
 }
 function updateChgBubble(){
   const show = activeTab() === 'spec' && !specEditing && !!$('spec').querySelector('.chg');
@@ -688,6 +703,7 @@ async function generateSpec(){
       updateChgBubble();
       if (j.usage){ usage.spec.calls++; usage.spec.prompt += j.usage.prompt_tokens||0;
         usage.spec.completion += j.usage.completion_tokens||0; usage.spec.total += j.usage.total_tokens||0; renderUsage(); }
+      refreshUsageMeta();   // refresh model label + OpenRouter credit (per-run spend)
       const worthShowing = j.revised ? fresh > 0 : true;
       if (worthShowing){
         if (activeTab() !== 'spec') $('specDot').classList.add('show');   // flag it if you're elsewhere
@@ -1018,18 +1034,33 @@ function renderUsage(){
   const s = usage.spec, b = usage.build, grand = s.total + b.total;
   const cost = b.cost ? ('≈ $' + b.cost.toFixed(b.cost < 1 ? 3 : 2)) : '—';
   const tile = (num, label) => `<div class="utile"><div class="unum">${num}</div><div class="ulabel">${label}</div></div>`;
+  const money = v => (v === null || v === undefined) ? '—' : ('$' + Number(v).toFixed(4));
+  const m = usageMeta, or = m.openrouter;
+  const specSub = `${escapeHtml(m.spec_label || 'Claude')}${m.spec_model ? ' · ' + escapeHtml(m.spec_model) : ''} · <b>${s.calls}</b> call${s.calls===1?'':'s'}`;
+  // OpenRouter credit card — only in demo (openrouter) mode
+  const orCard = m.provider !== 'openrouter' ? '' : `
+      <div class="ucard">
+        <div class="uhead"><span class="utitle">OpenRouter credit</span>
+          <span class="usub">${escapeHtml(m.spec_model || '')}</span></div>
+        ${or ? `<div class="utiles">
+          ${tile(money(orLastRun), 'Used last run')}
+          ${tile(money(or.usage), 'Credits used (total)')}
+          ${tile(or.limit_remaining === null ? 'Unlimited' : money(or.limit_remaining), 'Remaining')}
+        </div>` : `<div class="uhint">${m.openrouter_error ? 'Could not read key: ' + escapeHtml(m.openrouter_error) : 'Set OPENROUTER_API_KEY to show live credit.'}</div>`}
+      </div>`;
   el.innerHTML = `
     <div class="usage">
-      <p class="uhint">Token usage for this session. Spec text is generated with OpenAI; prototypes are built with Claude Code — different models, tallied separately.</p>
+      <p class="uhint">This session's usage. Spec text is generated with ${escapeHtml(m.spec_label || 'Claude')}; prototypes are built with Claude Code — tallied separately.</p>
       <div class="ucard">
         <div class="uhead"><span class="utitle">Specification generation</span>
-          <span class="usub">OpenAI · gpt-5.4-mini · <b>${s.calls}</b> call${s.calls===1?'':'s'}</span></div>
+          <span class="usub">${specSub}</span></div>
         <div class="utiles">
           ${tile(nf(s.prompt), 'Input tokens')}
           ${tile(nf(s.completion), 'Output tokens')}
           ${tile(nf(s.total), 'Total tokens')}
         </div>
       </div>
+      ${orCard}
       <div class="ucard">
         <div class="uhead"><span class="utitle">Prototype build</span>
           <span class="usub">Claude Code · <b>${b.builds}</b> build${b.builds===1?'':'s'}</span></div>
@@ -1045,7 +1076,7 @@ function renderUsage(){
 }
 
 // initial paint
-drawIdle(); renderTranscript(); renderQuestions(); renderSpecEmpty(); renderUsage();
+drawIdle(); renderTranscript(); renderQuestions(); renderSpecEmpty(); renderUsage(); refreshUsageMeta();
 window.addEventListener('resize', () => { if (!recording) drawIdle(); if (activeTab()==='spec') renderComments(); });
 </script>
 </body>

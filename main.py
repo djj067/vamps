@@ -475,6 +475,39 @@ def index():
     )
 
 
+@app.get("/usage")
+async def usage_info():
+    """Which model spec-gen uses, plus live OpenRouter credit when in demo mode.
+
+    OpenRouter's /api/v1/key returns cumulative `usage` (credits spent) and
+    `limit_remaining`; the UI diffs `usage` across calls to show per-run spend.
+    """
+    openrouter = SPEC_PROVIDER == "openrouter"
+    info = {
+        "provider": SPEC_PROVIDER,
+        "spec_label": "Claude (CLI)" if not openrouter else "OpenRouter",
+        "spec_model": ("(CLI default)" if not (openrouter or SPEC_MODEL_CLI) else
+                       (SPEC_MODEL if openrouter else SPEC_MODEL_CLI)),
+        "build_label": "Claude Code",
+    }
+    if openrouter and OPENROUTER_API_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=15) as http:
+                r = await http.get("https://openrouter.ai/api/v1/key",
+                                   headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"})
+            r.raise_for_status()
+            d = r.json().get("data", {}) or {}
+            info["openrouter"] = {
+                "usage": d.get("usage"),
+                "limit": d.get("limit"),
+                "limit_remaining": d.get("limit_remaining"),
+                "is_free_tier": d.get("is_free_tier"),
+            }
+        except Exception as e:
+            info["openrouter_error"] = str(e)
+    return info
+
+
 @app.post("/transcribe")
 async def transcribe(
     audio: UploadFile = File(...),
