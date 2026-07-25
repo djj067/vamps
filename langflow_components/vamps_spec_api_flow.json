@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "vamps_spec_generator",
-            "id": "Spec-vsa",
-            "name": "result_json",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Out-vsa",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Spec-vsa{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Out-vsa{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Spec-vsa",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Out-vsa",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
             "id": "ChatInput-vsa",
             "name": "message",
@@ -56,6 +28,34 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vsa\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "Spec-vsa",
         "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_spec_generator",
+            "id": "Spec-vsa",
+            "name": "result_json",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Out-vsa",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Spec-vsa{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Out-vsa{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Spec-vsa",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vsa\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Out-vsa",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vsa\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [

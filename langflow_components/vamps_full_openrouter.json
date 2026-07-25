@@ -6,6 +6,64 @@
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "vamps_spec_generator",
+            "id": "Spec-fo",
+            "name": "spec_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Spec-out-fo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Spec-fo{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fo\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-out-fo{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Spec-out-fo\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Spec-fo",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fo\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Spec-out-fo",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Spec-out-fo\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_build_prototype",
+            "id": "Build-fo",
+            "name": "html",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Html-fo",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-Build-fo{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-fo\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Html-fo{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Html-fo\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
+        "selected": false,
+        "source": "Build-fo",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-fo\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Html-fo",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Html-fo\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
             "dataType": "ChatInput",
             "id": "In-fo",
             "name": "message",
@@ -56,64 +114,6 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fo\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "Build-fo",
         "targetHandle": "{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-fo\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "vamps_build_prototype",
-            "id": "Build-fo",
-            "name": "html",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Html-fo",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-Build-fo{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-fo\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Html-fo{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Html-fo\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}",
-        "selected": false,
-        "source": "Build-fo",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-fo\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Html-fo",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Html-fo\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "vamps_spec_generator",
-            "id": "Spec-fo",
-            "name": "spec_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Spec-out-fo",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Spec-fo{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fo\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-out-fo{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Spec-out-fo\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Spec-fo",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fo\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Spec-out-fo",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Spec-out-fo\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [
@@ -1335,7 +1335,7 @@
       "zoom": 0.6
     }
   },
-  "description": "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Demo: needs OPENROUTER_API_KEY.",
+  "description": "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Needs OPENROUTER_API_KEY.",
   "endpoint_name": "None",
   "is_component": false,
   "name": "VAMPS Full (OpenRouter)"

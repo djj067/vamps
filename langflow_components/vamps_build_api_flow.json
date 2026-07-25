@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "vamps_build_prototype",
-            "id": "Build-vba",
-            "name": "result_json",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Out-vba",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Build-vba{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-vba\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Out-vba{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vba\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Build-vba",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-vba\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Out-vba",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vba\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "ChatInput",
             "id": "ChatInput-vba",
             "name": "message",
@@ -56,6 +28,34 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vba\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "Build-vba",
         "targetHandle": "{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-vba\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_build_prototype",
+            "id": "Build-vba",
+            "name": "result_json",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Out-vba",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Build-vba{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-vba\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Out-vba{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vba\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Build-vba",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-vba\u0153,\u0153name\u0153:\u0153result_json\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Out-vba",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Out-vba\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [

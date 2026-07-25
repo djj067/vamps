@@ -22,12 +22,9 @@ sys.path.insert(0, str(HERE / "vamps"))
 
 from lfx.graph import Graph
 from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
-from lfx.components.processing.combine_text import CombineTextComponent
 
 from spec_generator import SpecGenerator
 from build_prototype import BuildPrototype
-from deepgram_transcribe import DeepgramTranscribe
-from notes_parser import NotesParser
 
 
 def _compact(o):
@@ -131,64 +128,9 @@ def _full_pipeline(name, description, suffix, provider, model):
 
 
 def main():
-    # --- spec flow ---
-    spec_flow = _build(
-        "VAMPS Spec Flow",
-        "Chat Input -> VAMPS Spec Generator -> Chat Output",
-        [("ChatInput-vamps1", ChatInput()),
-         ("VampsSpec-vamps1", SpecGenerator()),
-         ("ChatOutput-vamps1", ChatOutput())],
-        [("ChatInput-vamps1", "message", "VampsSpec-vamps1", "transcript"),
-         ("VampsSpec-vamps1", "spec_text", "ChatOutput-vamps1", "input_value")],
-        {"ChatInput-vamps1": (100, 300), "VampsSpec-vamps1": (560, 240), "ChatOutput-vamps1": (1080, 300)},
-    )
-    (HERE / "vamps_spec_flow.json").write_text(json.dumps(spec_flow, indent=2))
-    print("wrote vamps_spec_flow.json")
-
-    # --- build (HTML generation) flow ---
-    build_flow = _build(
-        "VAMPS Build Flow",
-        "Chat Input (spec) -> VAMPS Build Prototype -> Chat Output (index.html)",
-        [("ChatInput-vbuild1", ChatInput()),
-         ("VampsBuild-vbuild1", BuildPrototype()),
-         ("ChatOutput-vbuild1", ChatOutput())],
-        [("ChatInput-vbuild1", "message", "VampsBuild-vbuild1", "spec"),
-         ("VampsBuild-vbuild1", "html", "ChatOutput-vbuild1", "input_value")],
-        {"ChatInput-vbuild1": (100, 300), "VampsBuild-vbuild1": (560, 240), "ChatOutput-vbuild1": (1080, 300)},
-    )
-    (HERE / "vamps_build_flow.json").write_text(json.dumps(build_flow, indent=2))
-    print("wrote vamps_build_flow.json")
-
-    # --- FULL pipeline: audio + notes -> merge -> spec -> prototype ---
-    #   Deepgram ─┐
-    #             ├─ Combine ─ Spec ─┬─ Build ─ Chat Output (index.html)
-    #   Notes ────┘                  └─ Text Output (spec markdown)
-    full = _build(
-        "VAMPS Full Pipeline",
-        "Deepgram + Notes -> Combine -> Spec Generator -> Build Prototype (+ spec text out)",
-        [("Deepgram-vf", DeepgramTranscribe()),
-         ("Notes-vf", NotesParser()),
-         ("Combine-vf", CombineTextComponent()),
-         ("Spec-vf", SpecGenerator()),
-         ("Build-vf", BuildPrototype()),
-         ("ChatOut-vf", ChatOutput()),
-         ("SpecOut-vf", TextOutputComponent())],
-        [("Deepgram-vf", "text", "Combine-vf", "text1"),
-         ("Notes-vf", "text", "Combine-vf", "text2"),
-         ("Combine-vf", "combined_text", "Spec-vf", "transcript"),
-         ("Spec-vf", "spec_text", "Build-vf", "spec"),
-         ("Spec-vf", "spec_text", "SpecOut-vf", "input_value"),
-         ("Build-vf", "html", "ChatOut-vf", "input_value")],
-        {"Deepgram-vf": (60, 100), "Notes-vf": (60, 480), "Combine-vf": (440, 280),
-         "Spec-vf": (820, 280), "Build-vf": (1220, 120), "ChatOut-vf": (1620, 120),
-         "SpecOut-vf": (1220, 520)},
-    )
-    (HERE / "vamps_full_flow.json").write_text(json.dumps(full, indent=2))
-    print("wrote vamps_full_flow.json")
-
-    # --- API flows (server-to-server): main.py POSTs to /api/v1/run and reads a
-    #     JSON string off the Text Output. Names matter: main.py resolves the flow
-    #     id by these display names. ---
+    # --- API flows the webpage bridge (main.py) calls per /spec and /build.
+    #     Names matter: main.py resolves the flow id by these display names,
+    #     and passes provider/model as tweaks (OpenRouter key from Langflow env).
     spec_api = _build(
         "VAMPS Spec API",
         "Chat Input (transcript) -> Spec Generator -> Text Output (result JSON)",
@@ -201,27 +143,6 @@ def main():
     )
     (HERE / "vamps_spec_api_flow.json").write_text(json.dumps(spec_api, indent=2))
     print("wrote vamps_spec_api_flow.json")
-
-    # --- transcript -> spec -> claude code, all in one (no mic, no frontend) ---
-    #   Chat Input (transcript) ─ Spec Generator ─┬─ Build Prototype ─ Chat Output (html)
-    #                                             └─ Text Output (spec markdown)
-    transcript_flow = _build(
-        "VAMPS Transcript Pipeline",
-        "Chat Input (transcript) -> Spec Generator -> Build Prototype -> Chat Output (html) + spec text",
-        [("ChatInput-vtp", ChatInput()),
-         ("Spec-vtp", SpecGenerator()),
-         ("Build-vtp", BuildPrototype()),
-         ("ChatOut-vtp", ChatOutput()),
-         ("SpecOut-vtp", TextOutputComponent())],
-        [("ChatInput-vtp", "message", "Spec-vtp", "transcript"),
-         ("Spec-vtp", "spec_text", "Build-vtp", "spec"),
-         ("Spec-vtp", "spec_text", "SpecOut-vtp", "input_value"),
-         ("Build-vtp", "html", "ChatOut-vtp", "input_value")],
-        {"ChatInput-vtp": (80, 300), "Spec-vtp": (480, 260), "Build-vtp": (900, 140),
-         "ChatOut-vtp": (1320, 140), "SpecOut-vtp": (900, 520)},
-    )
-    (HERE / "vamps_transcript_flow.json").write_text(json.dumps(transcript_flow, indent=2))
-    print("wrote vamps_transcript_flow.json")
 
     build_api = _build(
         "VAMPS Build API",
@@ -236,18 +157,10 @@ def main():
     (HERE / "vamps_build_api_flow.json").write_text(json.dumps(build_api, indent=2))
     print("wrote vamps_build_api_flow.json")
 
-    # --- two full drag-in flows for the canvas/Playground (no Deepgram) ---
-    claude_full = _full_pipeline(
-        "VAMPS Full (Claude)",
-        "Transcript -> Spec (Claude CLI) -> Build Prototype -> HTML + spec. Testing: uses local Claude auth.",
-        "fc", provider="claude_cli", model="",
-    )
-    (HERE / "vamps_full_claude.json").write_text(json.dumps(claude_full, indent=2))
-    print("wrote vamps_full_claude.json")
-
+    # --- the drag-in canvas/Playground flow (OpenRouter / Haiku), no Deepgram ---
     openrouter_full = _full_pipeline(
         "VAMPS Full (OpenRouter)",
-        "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Demo: needs OPENROUTER_API_KEY.",
+        "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Needs OPENROUTER_API_KEY.",
         "fo", provider="openrouter", model="anthropic/claude-haiku-4.5",
     )
     (HERE / "vamps_full_openrouter.json").write_text(json.dumps(openrouter_full, indent=2))
