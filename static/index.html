@@ -341,6 +341,30 @@
   #buildFrame { width: 100%; height: 100%; border: none; background: #fff; }
   .build-log { margin: 0; height: 100%; overflow: auto; padding: 16px 18px; font-family: var(--m);
     font-size: 12px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; }
+  /* Non-blocking build toast */
+  .build-toast { position: fixed; right: 20px; bottom: 20px; z-index: 40; max-width: min(440px, calc(100vw - 40px));
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-m);
+    box-shadow: var(--sh-2); animation: fade .15s ease; }
+  .build-toast.done { border-left-color: var(--success); }
+  .build-toast.err  { border-left-color: var(--danger); }
+  .build-toast .bt-text { font-size: 13px; color: var(--text); flex: 1 1 auto; }
+  .build-toast .btn { padding: 5px 10px; font-size: 12px; }
+  /* Version picker + comment-command bar inside the prototype viewer */
+  .ver-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 18px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .ver-label { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .ver-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .ver-chip { padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px;
+    font-family: var(--m); cursor: pointer; background: var(--surface-2); color: var(--text-2); }
+  .ver-chip:hover { border-color: var(--accent); }
+  .ver-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #verFlip { margin-left: 4px; padding: 4px 10px; font-size: 12px; }
+  .cmd-bar { display: flex; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--border);
+    background: var(--surface); }
+  .cmd-input { flex: 1 1 auto; padding: 7px 11px; border: 1px solid var(--border); border-radius: var(--r-m);
+    font-size: 13px; background: var(--surface); color: var(--text); }
+  .cmd-input:focus { outline: none; border-color: var(--accent); }
 
   @media (max-width: 700px) {
     .wave-wrap { display: none; }
@@ -407,6 +431,7 @@
           <button class="btn primary" id="specSaveBtn" hidden></button>
           <button class="btn subtle" id="specCancelBtn" hidden>Cancel</button>
           <button class="btn" id="buildBtn" disabled></button>
+          <button class="btn" id="protoOpenBtn" hidden></button>
           <button class="btn" id="exportBtn" disabled></button>
         </div>
       </div>
@@ -449,11 +474,29 @@
       </div>
     </div>
     <div class="modal-status" id="buildStatus"><span class="spin" id="buildSpin"></span><span id="buildStatusText">Starting…</span></div>
+    <div class="ver-bar" id="verBar" hidden>
+      <span class="ver-label">Versions</span>
+      <span class="ver-chips" id="verChips"></span>
+      <button class="btn subtle" id="verFlip" type="button" hidden title="Flip between the current and previous version">⇄ Flip</button>
+    </div>
+    <form class="cmd-bar" id="cmdForm" autocomplete="off">
+      <input id="cmdInput" class="cmd-input" placeholder="Describe a change to the prototype… e.g. make the header sticky, add a logout button">
+      <button class="btn primary" id="cmdSend" type="submit">Send</button>
+    </form>
     <div class="modal-body">
       <iframe id="buildFrame" title="Prototype preview" hidden></iframe>
       <pre class="build-log" id="buildLog" hidden></pre>
     </div>
   </div>
+</div>
+
+<!-- Non-blocking build notification (background build; page stays usable) -->
+<div class="build-toast" id="buildToast" hidden>
+  <span class="spin" id="buildToastSpin"></span>
+  <span id="buildToastText" class="bt-text"></span>
+  <button class="btn primary" id="buildToastOpen" hidden>Open</button>
+  <button class="btn subtle" id="buildToastCancel" hidden>Cancel</button>
+  <button class="btn subtle" id="buildToastDismiss" hidden aria-label="Dismiss">✕</button>
 </div>
 
 <script>
@@ -499,6 +542,7 @@ $('exportBtn').innerHTML = svg('download') + 'Export Word';
 $('specEditBtn').innerHTML = svg('pencil') + 'Edit';
 $('specSaveBtn').innerHTML = svg('check') + 'Save';
 $('buildBtn').innerHTML = svg('build') + 'Build prototype';
+$('protoOpenBtn').innerHTML = svg('file') + 'Open prototype';
 $('buildOpen').innerHTML = svg('external') + 'Open in new tab';
 
 let stream, recorder, chunks = [], seq = 0, recording = false;
@@ -507,11 +551,14 @@ let segments = [], notes = [], questions = [], lastSpec = '';
 let specBusy = false, specDirty = false, specEditing = false;
 // session token usage: spec generation (Claude) + prototype builds (Claude Code)
 const usage = { spec: { calls: 0, prompt: 0, completion: 0, total: 0 },
-                build: { builds: 0, input: 0, output: 0, total: 0, cost: 0 } };
+                build: { builds: 0, input: 0, output: 0, total: 0, cost: 0 },
+                transcribe: { seconds: 0, segments: 0 } };
 // which model is in use + live OpenRouter credit (demo mode)
-let usageMeta = { provider:'', spec_label:'Claude', spec_model:'', build_label:'Claude Code', openrouter:null, openrouter_error:null };
+let usageMeta = { provider:'', spec_label:'Claude', spec_model:'', build_label:'Claude Code', build_model:'', spec_price:null, build_price:null, deepgram_rate_min:0, openrouter:null, openrouter_error:null };
 let orUsagePrev = null;   // last cumulative OpenRouter spend, to diff per run
 let orLastRun = null;     // credits spent in the most recent run
+// What builds the prototype in the current mode: Claude Code (CLI) or OpenRouter.
+function buildLabel(){ return usageMeta.build_label || 'Claude Code'; }
 async function refreshUsageMeta(){
   try {
     const j = await (await fetch('/usage')).json();
@@ -621,10 +668,16 @@ function startWave(s){
 function stopWave(){ cancelAnimationFrame(waveRAF); if (audioCtx){ audioCtx.close(); audioCtx=null; } drawIdle(); }
 
 // ---------- recording ----------
+// Fire-and-forget: record a browser lifecycle event into the shared pipeline log.
+function clientLog(event, extra){
+  try { fetch('/log', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(Object.assign({ event }, extra || {})) }); } catch(e){}
+}
 async function start(){
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch(e){ alert('Microphone access is needed to record: ' + e.message); return; }
   recording = true;   // resume: keep seq and banked time so clips append, not overwrite
+  clientLog(segments.length ? 'record_resume' : 'record_start', { session: sessionId });
   $('recBtn').classList.add('live'); $('recBtn').innerHTML = svg('stop');
   $('recBtn').setAttribute('aria-label','Pause recording');
   refreshStatus(); startedAt = Date.now();
@@ -646,6 +699,7 @@ function startSegment(){
 }
 function stop(){
   recording = false; clearTimeout(segTimer); clearInterval(clockTimer);
+  clientLog('record_stop', { session: sessionId, clips: segments.length });
   elapsedBefore += Math.floor((Date.now() - startedAt) / 1000);   // bank elapsed time
   $('timer').textContent = fmtTime(elapsedBefore);
   if (recorder && recorder.state === 'recording') recorder.stop();  // uploads the final partial clip
@@ -665,7 +719,9 @@ async function upload(blob, s){
     const j = await (await fetch('/transcribe', { method:'POST', body: fd })).json();
     const seg = segments.find(x=>x.seq===s);
     if (seg) seg.pending = false;
-    if (j.ok){ if (seg) seg.text = j.text || ''; if ((j.text||'').trim()) scheduleSpec(); }
+    if (j.ok){ if (seg) seg.text = j.text || '';
+      usage.transcribe.seconds += (j.duration || 0); usage.transcribe.segments++; renderUsage();
+      if ((j.text||'').trim()) scheduleSpec(); }
     else if (seg){ seg.error = j.error || 'transcription failed'; }
   } catch(e){ const seg = segments.find(x=>x.seq===s); if (seg){ seg.pending = false; seg.error = 'network error'; } }
   transcribing--; renderTranscript(); refreshStatus();
@@ -777,6 +833,40 @@ function renderTranscript(){
   $('wordBadge').textContent = spokenTranscript().split(/\s+/).filter(Boolean).length;
 }
 
+// Render a /spec (or /spec_command) response into the doc — diff highlights,
+// questions, usage. Shared by auto-spec and the comment-command spec update.
+// Returns true if the revision changed nothing.
+function applySpecResponse(j){
+  const prevLines = new Set(lastSpec.split('\n').map(l => l.trim()).filter(Boolean));
+  lastSpec = j.spec;
+  if (j.revised){
+    specRev++;
+    for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t && !prevLines.has(t)) lineAge.set(t, specRev); }
+  } else {
+    specRev = 0; lineAge.clear();
+    for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t) lineAge.set(t, 0); }
+  }
+  const tierOf = ln => { const la = lineAge.get(ln.trim()); if (la == null || la < 1) return null; const d = specRev - la; return d <= 2 ? d : null; };
+  const el = $('spec'); el.innerHTML = mdToHtml(j.spec, tierOf);
+  const fresh = el.querySelectorAll('.chg0').length;
+  const noChange = j.revised && fresh === 0;
+  const tail = j.revised ? (fresh ? `${fresh} block${fresh>1?'s':''} changed` : 'no changes') : 'drafted';
+  $('specStamp').innerHTML = `<span class="live-dot"></span>${escapeHtml(j.model)} · ${j.latency_s}s · ${tail}`;
+  $('exportBtn').disabled = false; $('specEditBtn').disabled = false; $('buildBtn').disabled = false;
+  mergeQuestions(j.questions || [], j.answered || []);
+  updateChgBubble();
+  if (j.usage){ usage.spec.calls++; usage.spec.prompt += j.usage.prompt_tokens||0;
+    usage.spec.completion += j.usage.completion_tokens||0; usage.spec.total += j.usage.total_tokens||0; renderUsage(); }
+  refreshUsageMeta();
+  const worthShowing = j.revised ? fresh > 0 : true;
+  if (worthShowing){
+    if (activeTab() !== 'spec') $('specDot').classList.add('show');
+    else { const first = el.querySelector('.chg0');
+      if (first) first.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' }); }
+  }
+  return noChange;
+}
+
 // ---------- auto spec ----------
 function scheduleSpec(){ if (!fullMaterial()) return; if (specBusy || specEditing){ specDirty = true; return; } generateSpec(); }
 async function generateSpec(){
@@ -790,35 +880,7 @@ async function generateSpec(){
         open_questions: questions.filter(q=>!q.done).map(q=>q.text),
         resolved_questions: questions.filter(q=>q.done).map(q=>q.text) }) })).json();
     if (j.ok){
-      // Record which lines changed in this revision, then colour the last 3 revisions by recency.
-      const prevLines = new Set(lastSpec.split('\n').map(l => l.trim()).filter(Boolean));
-      lastSpec = j.spec;
-      if (j.revised){
-        specRev++;
-        for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t && !prevLines.has(t)) lineAge.set(t, specRev); }
-      } else {                       // a fresh draft is the new baseline — clear change history
-        specRev = 0; lineAge.clear();
-        for (const raw of j.spec.split('\n')){ const t = raw.trim(); if (t) lineAge.set(t, 0); }
-      }
-      // tier 0 = this revision (newest), 1 = one ago, 2 = two ago; older/baseline = no highlight
-      const tierOf = ln => { const la = lineAge.get(ln.trim()); if (la == null || la < 1) return null; const d = specRev - la; return d <= 2 ? d : null; };
-      const el = $('spec'); el.innerHTML = mdToHtml(j.spec, tierOf);
-      const fresh = el.querySelectorAll('.chg0').length;   // blocks from THIS revision
-      noChange = j.revised && fresh === 0;
-      const tail = j.revised ? (fresh ? `${fresh} block${fresh>1?'s':''} changed` : 'no changes from that clip') : 'drafted';
-      $('specStamp').innerHTML = `<span class="live-dot"></span>${escapeHtml(j.model)} · ${j.latency_s}s · ${tail}`;
-      $('exportBtn').disabled = false; $('specEditBtn').disabled = false; $('buildBtn').disabled = false;
-      mergeQuestions(j.questions || [], j.answered || []);   // repositions margin comments
-      updateChgBubble();
-      if (j.usage){ usage.spec.calls++; usage.spec.prompt += j.usage.prompt_tokens||0;
-        usage.spec.completion += j.usage.completion_tokens||0; usage.spec.total += j.usage.total_tokens||0; renderUsage(); }
-      refreshUsageMeta();   // refresh model label + OpenRouter credit (per-run spend)
-      const worthShowing = j.revised ? fresh > 0 : true;
-      if (worthShowing){
-        if (activeTab() !== 'spec') $('specDot').classList.add('show');   // flag it if you're elsewhere
-        else { const first = el.querySelector('.chg0');                   // you're here — jump to the newest change
-          if (first) first.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' }); }
-      }
+      noChange = applySpecResponse(j);   // render (diff highlights), questions, usage
     } else {
       errored = true; setState(recording ? 'rec' : 'idle', 'Spec error — retrying next segment');
       if (!lastSpec) $('spec').innerHTML = `<div class="empty"><span>Couldn't draft the spec: ${escapeHtml(j.error)}</span></div>`;
@@ -1022,6 +1084,43 @@ $('fileInput').onchange = async (e) => {
 // and edit the existing index.html. "Start fresh" begins a new one.
 let buildJob = null, buildTimer = null, buildShown = false, buildCounted = false;
 let protoId = null, protoDone = false, buildResuming = false;
+let versionList = [], curVersion = null, prevVersion = null;   // prototype version history
+
+function renderVersions(){
+  const bar = $('verBar'), chips = $('verChips');
+  if (!versionList.length){ bar.hidden = true; return; }
+  bar.hidden = false; chips.innerHTML = '';
+  versionList.forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ver-chip' + (v.n === curVersion ? ' active' : '');
+    b.textContent = 'v' + v.n;
+    b.onclick = () => loadVersion(v.n);
+    chips.appendChild(b);
+  });
+  $('verFlip').hidden = versionList.length < 2;
+}
+function loadVersion(n){
+  const v = versionList.find(x => x.n === n); if (!v) return;
+  if (n !== curVersion){ prevVersion = curVersion; curVersion = n; }
+  buildShown = false; showPrototype(v.url);   // reloads the iframe (cache-busted)
+  renderVersions();
+}
+function flipVersion(){
+  let target = prevVersion;
+  if (target == null || target === curVersion){   // default: the other of the last two
+    const ns = versionList.map(v => v.n);
+    target = ns.length >= 2 ? ns[ns.length - 2] : null;
+  }
+  if (target != null) loadVersion(target);
+}
+// Set the version list from a build/status response (or the versions endpoint).
+function setVersions(list, current){
+  versionList = list || [];
+  curVersion = current != null ? current : (versionList.length ? versionList[versionList.length - 1].n : null);
+  prevVersion = versionList.length > 1 ? versionList[versionList.length - 2].n : null;
+  renderVersions();
+}
 function countBuildTokens(t){
   if (!t || buildCounted) return;
   buildCounted = true;
@@ -1041,11 +1140,12 @@ function openBuildModal(resume){
   $('buildOpen').hidden = true; $('buildOpen').removeAttribute('href');
   $('buildStop').hidden = false;                       // running → can stop
   $('buildFresh').hidden = true;
-  setBuildStatus('Sending the spec to Claude Code…');
+  setBuildStatus('Sending the spec to ' + buildLabel() + '…');
 }
 function endBuildControls(){ $('buildStop').hidden = true; $('buildFresh').hidden = !protoDone; }
 function closeBuildModal(){
-  $('buildModal').hidden = true; clearTimeout(buildTimer); buildTimer = null;
+  // Only closes the viewer — a background build keeps polling and will still notify.
+  $('buildModal').hidden = true;
   $('buildFrame').src = 'about:blank';
 }
 function showPrototype(url){
@@ -1054,51 +1154,120 @@ function showPrototype(url){
   $('buildFrame').src = bust; $('buildFrame').hidden = false;
   $('buildOpen').href = bust; $('buildOpen').hidden = false;
 }
+// Re-open the prototype built this session — view/compare versions, describe changes.
+async function openSavedPrototype(){
+  if (!protoId) return;
+  $('buildModal').hidden = false;
+  $('buildLog').hidden = true; $('buildLog').textContent = '';
+  $('buildStop').hidden = true;          // nothing running to stop
+  $('buildFresh').hidden = false;        // still offer a rebuild from here
+  setBuildStatus('Prototype — pick a version or describe a change below', 'done');
+  try {
+    const r = await (await fetch('/prototype/versions/' + protoId)).json();
+    setVersions(r.versions || [], null);   // defaults current = latest
+  } catch(e){ setVersions([], null); }
+  buildShown = false;                    // let showPrototype reload the iframe
+  const cur = versionList.find(v => v.n === curVersion);
+  showPrototype(cur ? cur.url : `/generated/${protoId}/index.html`);
+}
+// Comment-command: edit the prototype from a plain-language instruction (no spec editing).
+async function sendCommand(instr){
+  instr = (instr || '').trim();
+  if (!instr || !protoId) return;
+  if (buildJob){ showBuildToast({ text: 'A change is already running — try again once it finishes', err: true }); return; }
+  $('cmdInput').value = '';
+  // 1) edit the current HTML in the background → new version
+  buildResuming = true; buildCounted = false; $('buildBtn').disabled = true;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default'){ try { Notification.requestPermission(); } catch(e){} }
+  showBuildToast({ text: 'Applying: ' + instr.slice(0, 60) + '… (you can keep recording)', running: true });
+  try {
+    const j = await (await fetch('/build', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ spec: lastSpec, project_id: protoId, resume: true, instruction: instr }) })).json();
+    if (!j.ok){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Change error: ' + (j.error||''), err: true }); }
+    else { buildJob = j.job_id; pollBuild(); }
+  } catch(e){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Change error: ' + e.message, err: true }); }
+  // 2) fold the same instruction into the spec (auto-apply, with highlights)
+  foldCommandIntoSpec(instr);
+}
+async function foldCommandIntoSpec(instr){
+  if (!lastSpec) return;
+  try {
+    const j = await (await fetch('/spec_command', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ spec: lastSpec, instruction: instr }) })).json();
+    if (j.ok) applySpecResponse(j);
+  } catch(e){ /* non-fatal — spec just stays as-is */ }
+}
+// --- Non-blocking build toast (bottom-right). The build runs in the background;
+//     you can keep recording and regenerating specs while it works. -------------
+function showBuildToast(opts){
+  const t = $('buildToast');
+  t.hidden = false;
+  t.classList.toggle('err', !!opts.err);
+  t.classList.toggle('done', !!opts.done);
+  $('buildToastText').textContent = opts.text || '';
+  $('buildToastSpin').hidden = !opts.running;
+  $('buildToastCancel').hidden = !opts.running;   // cancel only while running
+  $('buildToastOpen').hidden = !opts.done;        // open only when finished
+  $('buildToastDismiss').hidden = !!opts.running; // can't dismiss a running build
+}
+function hideBuildToast(){ $('buildToast').hidden = true; }
+
 async function buildPrototype(fresh){
   if (!lastSpec) return;
+  if (buildJob && !protoDone) return;             // a build is already running
   if (fresh || !protoId){ protoId = 'proto-' + Math.random().toString(36).slice(2, 10); protoDone = false; }
   const resume = protoDone;   // continue the existing prototype if one completed
-  openBuildModal(resume);
+  buildResuming = resume; buildCounted = false;
+  closeBuildModal();                              // don't block the page — run in background
+  $('buildBtn').disabled = true;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default'){ try { Notification.requestPermission(); } catch(e){} }
+  showBuildToast({ text: `${resume ? 'Updating' : 'Building'} prototype… (you can keep recording)`, running: true });
+  // NOTE: `spec: lastSpec` snapshots the spec AS IT IS NOW — later spec changes
+  // don't affect this build; click Build again to fold them into an update.
   try {
     const j = await (await fetch('/build', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ spec: lastSpec, project_id: protoId, resume }) })).json();
-    if (!j.ok){ setBuildStatus('Error: ' + (j.error||'could not start build'), 'err'); endBuildControls(); return; }
+    if (!j.ok){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Build error: ' + (j.error||'could not start'), err: true }); return; }
     buildJob = j.job_id;
-    setBuildStatus(j.resumed ? 'Claude Code is updating your prototype…' : 'Claude Code is building your prototype…');
     pollBuild();
-  } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); endBuildControls(); }
+  } catch(e){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Build error: ' + e.message, err: true }); }
 }
 async function stopBuild(){
   if (!buildJob) return;
   clearTimeout(buildTimer); buildTimer = null;
-  setBuildStatus('Stopping… kept your last prototype', 'err');
   try { await fetch('/build/cancel/' + buildJob, { method:'POST' }); } catch(e){}
-  endBuildControls();
+  buildJob = null; $('buildBtn').disabled = false;
+  showBuildToast({ text: 'Build cancelled — kept your last prototype', err: true });
+}
+function notifyDone(text){
+  try { if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('VAMPS', { body: text }); } catch(e){}
 }
 function pollBuild(){
   clearTimeout(buildTimer);
   buildTimer = setTimeout(async () => {
     try {
       const s = await (await fetch('/build/status/' + buildJob)).json();
-      if (!s.ok){ setBuildStatus('Build not found', 'err'); endBuildControls(); return; }
+      if (!s.ok){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Build not found', err: true }); return; }
       const secs = Math.round(s.elapsed_s);
-      const verb = buildResuming ? 'updating' : 'building';
+      const verb = buildResuming ? 'Updating' : 'Building';
       if (s.status === 'running'){
-        setBuildStatus(`Claude Code is ${verb} your prototype… ${secs}s`);
+        showBuildToast({ text: `${verb} prototype… ${secs}s (keep recording — I'll notify you)`, running: true });
         pollBuild();
       } else if (s.status === 'done'){
-        setBuildStatus(`Prototype ready · ${buildResuming ? 'updated' : 'built'} in ${secs}s`, 'done');
-        protoDone = true; showPrototype(s.app_url); countBuildTokens(s.tokens); endBuildControls();
+        protoDone = true; buildJob = null; countBuildTokens(s.tokens);
+        $('buildBtn').disabled = false; $('protoOpenBtn').hidden = false;
+        setVersions(s.versions || [], s.version);
+        if (!$('buildModal').hidden && curVersion != null) loadVersion(curVersion);   // refresh an open viewer to the new version
+        const msg = `Prototype ready · ${buildResuming ? 'updated' : 'built'} in ${secs}s`;
+        showBuildToast({ text: msg, done: true }); notifyDone(msg);
       } else if (s.status === 'done_no_file'){
-        setBuildStatus('Claude Code finished but produced no index.html', 'err');
-        $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
-        countBuildTokens(s.tokens); endBuildControls();
+        buildJob = null; countBuildTokens(s.tokens); $('buildBtn').disabled = false;
+        showBuildToast({ text: buildLabel() + ' finished but produced no index.html', err: true });
       } else {
-        setBuildStatus('Build failed', 'err');
-        $('buildLog').hidden = false; $('buildLog').textContent = s.log || '(no output)';
-        endBuildControls();
+        buildJob = null; $('buildBtn').disabled = false;
+        showBuildToast({ text: 'Build failed — kept your last prototype', err: true });
       }
-    } catch(e){ setBuildStatus('Error: ' + e.message, 'err'); endBuildControls(); }
+    } catch(e){ buildJob = null; $('buildBtn').disabled = false; showBuildToast({ text: 'Build error: ' + e.message, err: true }); }
   }, 2500);
 }
 
@@ -1141,9 +1310,15 @@ $('specEditBtn').onclick = enterSpecEdit;
 $('specSaveBtn').onclick = saveSpecEdit;
 $('specCancelBtn').onclick = exitSpecEdit;
 $('buildBtn').onclick = () => buildPrototype(false);
-$('buildFresh').onclick = () => buildPrototype(true);
+$('protoOpenBtn').onclick = openSavedPrototype;
+$('buildFresh').onclick = () => { closeBuildModal(); buildPrototype(true); };
 $('buildStop').onclick = stopBuild;
 $('buildClose').onclick = closeBuildModal;
+$('buildToastOpen').onclick = () => { hideBuildToast(); openSavedPrototype(); };
+$('buildToastCancel').onclick = stopBuild;
+$('buildToastDismiss').onclick = hideBuildToast;
+$('verFlip').onclick = flipVersion;
+$('cmdForm').addEventListener('submit', e => { e.preventDefault(); sendCommand($('cmdInput').value); });
 $('specEdit').addEventListener('input', e => { const t = e.target; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; });
 $('clearBtn').onclick = () => {
   if (recording) stop();
@@ -1151,7 +1326,10 @@ $('clearBtn').onclick = () => {
   segments=[]; notes=[]; questions=[]; seq=0; elapsedBefore=0; lastSpec=''; specBusy=false; specDirty=false;
   expanded.clear(); touched.clear(); knownKeys.clear(); autoKey=null; transcribing=0;
   specRev=0; lineAge.clear(); $('chgBubble').hidden=true; $('specEditBtn').disabled=true; $('buildBtn').disabled=true;
-  protoId=null; protoDone=false; $('comments').innerHTML='';
+  clearTimeout(buildTimer); buildTimer=null; buildJob=null; hideBuildToast();
+  protoId=null; protoDone=false; $('protoOpenBtn').hidden=true;
+  versionList=[]; curVersion=null; prevVersion=null; renderVersions();
+  $('comments').innerHTML='';
   $('spec').innerHTML=''; renderSpecEmpty(); $('specStamp').textContent='Not started';
   $('exportBtn').disabled=true; $('timer').textContent='00:00'; $('specDot').classList.remove('show');
   renderTranscript(); renderQuestions(); setState('idle', 'Ready');
@@ -1167,47 +1345,66 @@ function renderSpecEmpty(){ $('spec').innerHTML = `<div class="empty">${svg('fil
 const nf = n => (n || 0).toLocaleString();
 function renderUsage(){
   const el = $('pane-usage'); if (!el) return;
-  const s = usage.spec, b = usage.build, grand = s.total + b.total;
-  const cost = b.cost ? ('≈ $' + b.cost.toFixed(b.cost < 1 ? 3 : 2)) : '—';
-  const tile = (num, label) => `<div class="utile"><div class="unum">${num}</div><div class="ulabel">${label}</div></div>`;
-  const money = v => (v === null || v === undefined) ? '—' : ('$' + Number(v).toFixed(4));
+  const s = usage.spec, b = usage.build, tr = usage.transcribe;
   const m = usageMeta, or = m.openrouter;
-  const specSub = `${escapeHtml(m.spec_label || 'Claude')}${m.spec_model ? ' · ' + escapeHtml(m.spec_model) : ''} · <b>${s.calls}</b> call${s.calls===1?'':'s'}`;
-  // OpenRouter credit card — only in demo (openrouter) mode
-  const orCard = m.provider !== 'openrouter' ? '' : `
-      <div class="ucard">
-        <div class="uhead"><span class="utitle">OpenRouter credit</span>
-          <span class="usub">${escapeHtml(m.spec_model || '')}</span></div>
-        ${or ? `<div class="utiles">
-          ${tile(money(orLastRun), 'Used last run')}
-          ${tile(money(or.usage), 'Credits used (total)')}
-          ${tile(or.limit_remaining === null ? 'Unlimited' : money(or.limit_remaining), 'Remaining')}
-        </div>` : `<div class="uhint">${m.openrouter_error ? 'Could not read key: ' + escapeHtml(m.openrouter_error) : 'Set OPENROUTER_API_KEY to show live credit.'}</div>`}
-      </div>`;
+  const tile = (num, label) => `<div class="utile"><div class="unum">${num}</div><div class="ulabel">${label}</div></div>`;
+  const usd = v => (v === null || v === undefined) ? '—' : ('$' + Number(v).toFixed(4));
+
+  // Dollar costs from live per-token prices (only populated in OpenRouter mode).
+  const sp = m.spec_price, bp = m.build_price;
+  const specCost  = sp ? (s.prompt * sp.in + s.completion * sp.out) : null;
+  const buildCost = bp ? (b.input  * bp.in + b.output     * bp.out) : null;
+  const orUsed = (specCost || 0) + (buildCost || 0);
+  const dgMin  = (tr.seconds || 0) / 60;
+  const dgCost = dgMin * (m.deepgram_rate_min || 0);
+
+  const specSub  = `${escapeHtml(m.spec_label || 'Claude')}${m.spec_model ? ' · ' + escapeHtml(m.spec_model) : ''} · <b>${s.calls}</b> call${s.calls===1?'':'s'}`;
+  const buildSub = `${escapeHtml(m.build_label || 'Claude Code')}${m.build_model ? ' · ' + escapeHtml(m.build_model) : ''} · <b>${b.builds}</b> build${b.builds===1?'':'s'}`;
+  const dgSub    = m.deepgram_rate_min ? ('nova-3 · $' + Number(m.deepgram_rate_min).toFixed(4) + '/min') : 'nova-3';
+
+  // 1) OpenRouter — used this run + remaining (first line)
+  const orCard = m.provider !== 'openrouter'
+    ? `<div class="ucard"><div class="uhead"><span class="utitle">OpenRouter</span></div>
+         <div class="uhint">Not in OpenRouter mode — spec runs on your Claude subscription (no OpenRouter charge).</div></div>`
+    : `<div class="ucard">
+         <div class="uhead"><span class="utitle">OpenRouter</span><span class="usub">spec + prototype</span></div>
+         <div class="utiles">
+           ${tile(usd(orUsed), 'Used this run')}
+           ${tile(or ? (or.limit_remaining === null ? 'Unlimited' : usd(or.limit_remaining)) : '—', 'Remaining')}
+         </div>
+         ${or ? '' : `<div class="uhint">${m.openrouter_error ? 'Could not read key: ' + escapeHtml(m.openrouter_error) : 'Set OPENROUTER_API_KEY to show live credit.'}</div>`}
+       </div>`;
+
   el.innerHTML = `
     <div class="usage">
-      <p class="uhint">This session's usage. Spec text is generated with ${escapeHtml(m.spec_label || 'Claude')}; prototypes are built with Claude Code — tallied separately.</p>
+      ${orCard}
       <div class="ucard">
-        <div class="uhead"><span class="utitle">Specification generation</span>
-          <span class="usub">${specSub}</span></div>
+        <div class="uhead"><span class="utitle">Deepgram transcription</span><span class="usub">${dgSub}</span></div>
+        <div class="utiles">
+          ${tile(dgMin.toFixed(2), 'Minutes')}
+          ${tile(nf(tr.segments), 'Segments')}
+          ${tile(usd(dgCost), 'Est. cost')}
+        </div>
+      </div>
+      <div class="ucard">
+        <div class="uhead"><span class="utitle">Specification generation</span><span class="usub">${specSub}</span></div>
         <div class="utiles">
           ${tile(nf(s.prompt), 'Input tokens')}
           ${tile(nf(s.completion), 'Output tokens')}
           ${tile(nf(s.total), 'Total tokens')}
+          ${tile(usd(specCost), 'Est. cost')}
         </div>
       </div>
-      ${orCard}
       <div class="ucard">
-        <div class="uhead"><span class="utitle">Prototype build</span>
-          <span class="usub">Claude Code · <b>${b.builds}</b> build${b.builds===1?'':'s'}</span></div>
+        <div class="uhead"><span class="utitle">Prototype build</span><span class="usub">${buildSub}</span></div>
         <div class="utiles">
           ${tile(nf(b.input), 'Input tokens')}
           ${tile(nf(b.output), 'Output tokens')}
           ${tile(nf(b.total), 'Total tokens')}
-          ${tile(cost, 'Est. cost')}
+          ${tile(usd(buildCost), 'Est. cost')}
         </div>
       </div>
-      <div class="utotal">Session total <b>${nf(grand)}</b> tokens</div>
+      <div class="utotal">Estimated spend · OpenRouter <b>${usd(orUsed)}</b> · Deepgram <b>${usd(dgCost)}</b></div>
     </div>`;
 }
 

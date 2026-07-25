@@ -124,6 +124,11 @@ def _full_pipeline(name, description, suffix, provider, model):
     _set_field(flow, sp, "provider", provider)
     if model:
         _set_field(flow, sp, "model", model)
+    # Build via the same provider (Option B: openrouter build calls a Claude model
+    # directly instead of the Claude Code CLI). Sonnet 5 for the HTML generation.
+    _set_field(flow, bd, "provider", provider)
+    if provider == "openrouter":
+        _set_field(flow, bd, "model", "anthropic/claude-sonnet-5")
     return flow
 
 
