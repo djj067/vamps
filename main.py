@@ -46,8 +46,14 @@ TRANSCRIBE_KEYTERMS = [
 ]
 
 # --- Spec generation: Claude (via the CLI for testing, OpenRouter for demo) --
-# SPEC_PROVIDER: 'claude_cli' (uses local Claude auth, no API cost) or 'openrouter'.
+# Provider is runtime-switchable from the UI (POST /provider) — no env editing.
+# SPEC_PROVIDER is just the startup default.
 SPEC_PROVIDER = os.getenv("SPEC_PROVIDER", "claude_cli").lower()
+RUNTIME = {"provider": SPEC_PROVIDER}
+
+
+def current_provider() -> str:
+    return RUNTIME["provider"]
 SPEC_MODEL = os.getenv("SPEC_MODEL", "anthropic/claude-3.5-sonnet")   # openrouter slug
 SPEC_MODEL_CLI = os.getenv("SPEC_MODEL_CLI", "")                       # optional --model for the CLI
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
@@ -231,7 +237,7 @@ def _spec_complete(system: str, user: str, temperature: float = 0.3):
     claude_cli: local Claude auth via the CLI (no API cost) — for testing.
     openrouter: OpenAI-compatible call to OpenRouter — for the demo.
     """
-    if SPEC_PROVIDER == "openrouter":
+    if current_provider() == "openrouter":
         resp = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY).chat.completions.create(
             model=SPEC_MODEL, temperature=temperature,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -241,15 +247,23 @@ def _spec_complete(system: str, user: str, temperature: float = 0.3):
     cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--allowed-tools", ""]
     if SPEC_MODEL_CLI:
         cmd += ["--model", SPEC_MODEL_CLI]
-    proc = subprocess.run(cmd, input=f"{system}\n\n{user}",
-                          capture_output=True, text=True, timeout=240)
-    wrapper = json.loads(proc.stdout or "{}")
+    prompt = f"{system}\n\n{user}"
+    wrapper, last = {}, ""
+    for _ in range(2):   # CLI occasionally returns empty stdout; retry once
+        proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=240)
+        last = proc.stderr or ""
+        if (proc.stdout or "").strip():
+            wrapper = json.loads(proc.stdout)
+            if wrapper.get("result"):
+                break
+    result = wrapper.get("result") or ""
+    if not result:
+        raise RuntimeError(f"claude CLI returned no output. stderr: {last[:200]}")
     u = wrapper.get("usage") or {}
     inp = (u.get("input_tokens", 0) or 0) + (u.get("cache_read_input_tokens", 0) or 0) \
         + (u.get("cache_creation_input_tokens", 0) or 0)
     out = u.get("output_tokens", 0) or 0
-    return (wrapper.get("result") or ""), {
-        "prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
+    return result, {"prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
 
 
 def _verify_answers(candidates: list, transcript: str):
@@ -475,6 +489,16 @@ def index():
     )
 
 
+@app.post("/provider")
+async def set_provider(payload: dict):
+    """Switch spec-gen provider at runtime (claude_cli | openrouter) — no env edit."""
+    p = str(payload.get("provider", "")).strip().lower()
+    if p not in ("claude_cli", "openrouter"):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "provider must be claude_cli or openrouter"})
+    RUNTIME["provider"] = p
+    return {"ok": True, "provider": p}
+
+
 @app.get("/usage")
 async def usage_info():
     """Which model spec-gen uses, plus live OpenRouter credit when in demo mode.
@@ -482,9 +506,9 @@ async def usage_info():
     OpenRouter's /api/v1/key returns cumulative `usage` (credits spent) and
     `limit_remaining`; the UI diffs `usage` across calls to show per-run spend.
     """
-    openrouter = SPEC_PROVIDER == "openrouter"
+    openrouter = current_provider() == "openrouter"
     info = {
-        "provider": SPEC_PROVIDER,
+        "provider": current_provider(),
         "spec_label": "Claude (CLI)" if not openrouter else "OpenRouter",
         "spec_model": ("(CLI default)" if not (openrouter or SPEC_MODEL_CLI) else
                        (SPEC_MODEL if openrouter else SPEC_MODEL_CLI)),
@@ -598,12 +622,19 @@ async def spec(payload: dict):
     if USE_LANGFLOW:
         t0 = time.time()
         try:
-            tweaks = {LANGFLOW_SPEC_NODE: {
+            # Pass the runtime provider (+ model/key for openrouter) so the toggle
+            # takes effect inside Langflow without touching its env.
+            node_tweaks = {
                 "previous_spec": previous_spec,
                 "resolved_questions": "\n".join(resolved),
                 "open_questions": "\n".join(open_qs),
-                "model": SPEC_MODEL,
-            }}
+                "provider": current_provider(),
+            }
+            if current_provider() == "openrouter":
+                node_tweaks["model"] = SPEC_MODEL
+                if OPENROUTER_API_KEY:
+                    node_tweaks["api_key"] = OPENROUTER_API_KEY
+            tweaks = {LANGFLOW_SPEC_NODE: node_tweaks}
             data = await asyncio.to_thread(_lf_run, LANGFLOW_SPEC_FLOW, transcript, tweaks)
             data["latency_s"] = round(time.time() - t0, 2)
             data["via"] = "langflow"
