@@ -37,6 +37,20 @@ original inline behaviour. Setup:
 it on a background thread and the browser keeps polling `/build/status` exactly
 as before; the returned HTML is written under `generated/` and served locally.
 
+## Spec provider (Claude)
+
+Transcript → spec uses **Claude** (OpenAI is no longer used), via a provider flag:
+
+- `SPEC_PROVIDER=claude_cli` (default) — **testing**: the Spec Generator shells out
+  to the local `claude` CLI, using your existing Claude auth. No API key, no cost.
+  Requires `claude` on Langflow's PATH.
+- `SPEC_PROVIDER=openrouter` — **demo**: calls OpenRouter (`OPENROUTER_API_KEY`,
+  `SPEC_MODEL` = an OpenRouter slug like `anthropic/claude-3.5-sonnet`).
+
+Set these in **Langflow's** environment (the component runs there), or per-node on
+the Spec Generator (`provider`, `OpenRouter API Key`, `model` fields). JSON output
+is parsed leniently (Claude doesn't honour OpenAI json mode).
+
 ## Components
 
 | Component (`name`) | Ported from `main.py` | Output |

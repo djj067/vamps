@@ -45,8 +45,13 @@ TRANSCRIBE_KEYTERMS = [
     t.strip() for t in os.getenv("TRANSCRIBE_KEYTERMS", "").split(",") if t.strip()
 ]
 
-# --- Spec generation: OpenAI -------------------------------------------------
-SPEC_MODEL = os.getenv("SPEC_MODEL", "gpt-5.4-mini")
+# --- Spec generation: Claude (via the CLI for testing, OpenRouter for demo) --
+# SPEC_PROVIDER: 'claude_cli' (uses local Claude auth, no API cost) or 'openrouter'.
+SPEC_PROVIDER = os.getenv("SPEC_PROVIDER", "claude_cli").lower()
+SPEC_MODEL = os.getenv("SPEC_MODEL", "anthropic/claude-3.5-sonnet")   # openrouter slug
+SPEC_MODEL_CLI = os.getenv("SPEC_MODEL_CLI", "")                       # optional --model for the CLI
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 
 # --- Langflow bridge ---------------------------------------------------------
 # When LANGFLOW_API_KEY is set, /spec and /build run through Langflow flows
@@ -76,7 +81,6 @@ GEN_DIR.mkdir(exist_ok=True)
 # CLAUDE_CODE_OAUTH_TOKEN (inherited from the environment) against the CC plan.
 CLAUDE_BIN = shutil.which("claude") or "claude"
 
-client = OpenAI()  # reads OPENAI_API_KEY from env; used only for /spec
 app = FastAPI(title="VAMPS")
 
 # In-memory registry of prototype build jobs: id -> {proc, dir, started}
@@ -206,6 +210,48 @@ def _usage_of(resp) -> dict:
     }
 
 
+def _parse_json(text: str) -> dict:
+    """Parse a JSON object from an LLM reply, tolerating code fences / preamble."""
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\s*", "", t)
+        t = re.sub(r"\s*```$", "", t)
+    try:
+        return json.loads(t)
+    except Exception:
+        i, j = t.find("{"), t.rfind("}")
+        if i >= 0 and j > i:
+            return json.loads(t[i:j + 1])
+        raise
+
+
+def _spec_complete(system: str, user: str, temperature: float = 0.3):
+    """One Claude completion, returning (content_text, usage_dict).
+
+    claude_cli: local Claude auth via the CLI (no API cost) — for testing.
+    openrouter: OpenAI-compatible call to OpenRouter — for the demo.
+    """
+    if SPEC_PROVIDER == "openrouter":
+        resp = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY).chat.completions.create(
+            model=SPEC_MODEL, temperature=temperature,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        )
+        return (resp.choices[0].message.content or ""), _usage_of(resp)
+
+    cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--allowed-tools", ""]
+    if SPEC_MODEL_CLI:
+        cmd += ["--model", SPEC_MODEL_CLI]
+    proc = subprocess.run(cmd, input=f"{system}\n\n{user}",
+                          capture_output=True, text=True, timeout=240)
+    wrapper = json.loads(proc.stdout or "{}")
+    u = wrapper.get("usage") or {}
+    inp = (u.get("input_tokens", 0) or 0) + (u.get("cache_read_input_tokens", 0) or 0) \
+        + (u.get("cache_creation_input_tokens", 0) or 0)
+    out = u.get("output_tokens", 0) or 0
+    return (wrapper.get("result") or ""), {
+        "prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
+
+
 def _verify_answers(candidates: list, transcript: str):
     """Second-pass skeptic: keep only candidates the model confirms are truly answered.
 
@@ -220,19 +266,14 @@ def _verify_answers(candidates: list, transcript: str):
     )
     user = f"TRANSCRIPT:\n---\n{transcript}\n---\n\nCANDIDATES:\n{listing}"
     try:
-        resp = client.chat.completions.create(
-            model=SPEC_MODEL,
-            messages=[{"role": "system", "content": VERIFY_SYSTEM}, {"role": "user", "content": user}],
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-        data = json.loads(resp.choices[0].message.content or "{}")
+        content, usage = _spec_complete(VERIFY_SYSTEM, user, temperature=0)
+        data = _parse_json(content)
         confirmed = {
             _normalize(str(r.get("question", "")))
             for r in data.get("results", [])
             if r.get("answered") is True
         }
-        return [c for c in candidates if _normalize(c["question"]) in confirmed], _usage_of(resp)
+        return [c for c in candidates if _normalize(c["question"]) in confirmed], usage
     except Exception:
         # On verifier failure, fall back to the evidence-checked candidates rather than crash.
         return candidates, zero
@@ -539,15 +580,9 @@ async def spec(payload: dict):
 
     t0 = time.time()
     try:
-        resp = client.chat.completions.create(
-            model=SPEC_MODEL,
-            messages=_build_spec_messages(transcript, previous_spec, resolved, open_qs),
-            temperature=0.3,
-            response_format={"type": "json_object"},
-        )
-        raw = resp.choices[0].message.content or "{}"
-        data = json.loads(raw)
-        usage = _usage_of(resp)   # tally spec-generation tokens (+ verify pass below)
+        msgs = _build_spec_messages(transcript, previous_spec, resolved, open_qs)
+        content, usage = _spec_complete(msgs[0]["content"], msgs[1]["content"], temperature=0.3)
+        data = _parse_json(content)   # tally spec-generation tokens (+ verify pass below)
         spec_md = (data.get("spec") or "").strip()
         # Questions are objects {question, anchor}; anchor is a quote used to place
         # the question next to the spec text it's about.

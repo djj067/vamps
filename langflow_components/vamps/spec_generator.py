@@ -12,7 +12,10 @@ The prompts and JSON contract are identical to the original backend so behaviour
 matches one-to-one.
 """
 import json
+import os
 import re
+import shutil
+import subprocess
 
 # NOTE: keep these as flat, top-level imports. Langflow's flow loader exec's the
 # embedded component code and only binds imports found at module top level (it
@@ -22,7 +25,7 @@ from langflow.custom import Component
 from langflow.io import BoolInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from langflow.schema.data import Data
 from langflow.schema.message import Message
-from openai import OpenAI
+from openai import OpenAI  # used for the OpenRouter (demo) provider
 
 
 # --- Prompt contract (verbatim from the original backend) --------------------
@@ -151,6 +154,26 @@ def _evidence_supported(evidence: str, transcript: str) -> bool:
     return hits / len(words) >= 0.8
 
 
+def _parse_json(text: str) -> dict:
+    """Parse a JSON object out of an LLM reply, tolerating code fences / preamble.
+
+    Claude (via CLI or OpenRouter) doesn't honour OpenAI's json_object mode, so it
+    may wrap the object in ```json fences or add stray text. Strip that and, as a
+    last resort, grab the outermost {...}.
+    """
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\s*", "", t)
+        t = re.sub(r"\s*```$", "", t)
+    try:
+        return json.loads(t)
+    except Exception:
+        i, j = t.find("{"), t.rfind("}")
+        if i >= 0 and j > i:
+            return json.loads(t[i:j + 1])
+        raise
+
+
 def _usage_of(resp) -> dict:
     """Extract OpenAI token usage from a chat-completions response, defensively."""
     u = getattr(resp, "usage", None)
@@ -212,16 +235,26 @@ class SpecGenerator(Component):
             info="One per line (or a JSON array). Still-awaiting-answer questions carried over from a prior turn.",
             value="",
         ),
+        MessageTextInput(
+            name="provider",
+            display_name="Provider",
+            info="'claude_cli' (testing, uses local Claude auth) or 'openrouter' (demo). "
+                 "Blank = the SPEC_PROVIDER env var (default claude_cli).",
+            value="",
+            advanced=True,
+        ),
         SecretStrInput(
-            name="openai_api_key",
-            display_name="OpenAI API Key",
-            info="Leave blank to use the OPENAI_API_KEY environment variable.",
+            name="api_key",
+            display_name="OpenRouter API Key",
+            info="Only for the openrouter provider. Blank = OPENROUTER_API_KEY env var.",
             required=False,
         ),
         MessageTextInput(
             name="model",
             display_name="Model",
-            value="gpt-5.4-mini",
+            info="openrouter: model slug (blank = SPEC_MODEL env / anthropic/claude-3.5-sonnet). "
+                 "claude_cli: optional --model (blank = the CLI default).",
+            value="",
         ),
         BoolInput(
             name="verify",
@@ -237,10 +270,44 @@ class SpecGenerator(Component):
         Output(name="result_json", display_name="Full Result (JSON text)", method="build_result_json"),
     ]
 
-    # --- internals -----------------------------------------------------------
-    def _client(self) -> OpenAI:
-        key = (self.openai_api_key or "").strip()
-        return OpenAI(api_key=key) if key else OpenAI()
+    # --- LLM plumbing --------------------------------------------------------
+    def _provider(self) -> str:
+        return ((self.provider or "").strip() or os.getenv("SPEC_PROVIDER", "claude_cli")).lower()
+
+    def _complete(self, system: str, user: str, temperature: float = 0.3):
+        """Run one chat completion, returning (content_text, usage_dict).
+
+        Two providers, both Claude:
+          - claude_cli: shell out to the `claude` CLI (uses local Claude auth, no
+            API key/cost) — for testing.
+          - openrouter: OpenAI-compatible call to OpenRouter — for the demo.
+        """
+        if self._provider() == "openrouter":
+            key = (self.api_key or "").strip() or os.getenv("OPENROUTER_API_KEY", "")
+            base = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+            model = (self.model or "").strip() or os.getenv("SPEC_MODEL", "anthropic/claude-3.5-sonnet")
+            resp = OpenAI(base_url=base, api_key=key).chat.completions.create(
+                model=model, temperature=temperature,
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+            )
+            return (resp.choices[0].message.content or ""), _usage_of(resp)
+
+        # claude_cli — prepend our instructions to the prompt; disable tools.
+        claude = shutil.which("claude") or "claude"
+        cmd = [claude, "-p", "--output-format", "json", "--allowed-tools", ""]
+        model = (self.model or "").strip() or os.getenv("SPEC_MODEL_CLI", "")
+        if model:
+            cmd += ["--model", model]
+        proc = subprocess.run(cmd, input=f"{system}\n\n{user}",
+                              capture_output=True, text=True, timeout=240)
+        wrapper = json.loads(proc.stdout or "{}")
+        u = wrapper.get("usage") or {}
+        inp = (u.get("input_tokens", 0) or 0) + (u.get("cache_read_input_tokens", 0) or 0) \
+            + (u.get("cache_creation_input_tokens", 0) or 0)
+        out = u.get("output_tokens", 0) or 0
+        usage = {"prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
+        return (wrapper.get("result") or ""), usage
 
     def _build_messages(self, transcript, previous_spec, resolved, open_qs):
         if previous_spec.strip():
@@ -274,7 +341,7 @@ class SpecGenerator(Component):
             {"role": "user", "content": user},
         ]
 
-    def _verify_answers(self, client, candidates, transcript):
+    def _verify_answers(self, candidates, transcript):
         zero = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         if not candidates:
             return [], zero
@@ -284,19 +351,14 @@ class SpecGenerator(Component):
         )
         user = f"TRANSCRIPT:\n---\n{transcript}\n---\n\nCANDIDATES:\n{listing}"
         try:
-            resp = client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "system", "content": VERIFY_SYSTEM}, {"role": "user", "content": user}],
-                temperature=0,
-                response_format={"type": "json_object"},
-            )
-            data = json.loads(resp.choices[0].message.content or "{}")
+            content, usage = self._complete(VERIFY_SYSTEM, user, temperature=0)
+            data = _parse_json(content)
             confirmed = {
                 _normalize(str(r.get("question", "")))
                 for r in data.get("results", [])
                 if r.get("answered") is True
             }
-            return [c for c in candidates if _normalize(c["question"]) in confirmed], _usage_of(resp)
+            return [c for c in candidates if _normalize(c["question"]) in confirmed], usage
         except Exception:
             return candidates, zero
 
@@ -312,15 +374,9 @@ class SpecGenerator(Component):
         if not transcript:
             raise ValueError("SpecGenerator: transcript is empty.")
 
-        client = self._client()
-        resp = client.chat.completions.create(
-            model=self.model,
-            messages=self._build_messages(transcript, previous_spec, resolved, open_qs),
-            temperature=0.3,
-            response_format={"type": "json_object"},
-        )
-        data = json.loads(resp.choices[0].message.content or "{}")
-        usage = _usage_of(resp)
+        msgs = self._build_messages(transcript, previous_spec, resolved, open_qs)
+        content, usage = self._complete(msgs[0]["content"], msgs[1]["content"], temperature=0.3)
+        data = _parse_json(content)
 
         spec_md = (data.get("spec") or "").strip()
         questions = []
@@ -345,7 +401,7 @@ class SpecGenerator(Component):
                 })
 
         if self.verify:
-            confirmed, verify_usage = self._verify_answers(client, candidates, transcript)
+            confirmed, verify_usage = self._verify_answers(candidates, transcript)
         else:
             confirmed, verify_usage = candidates, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         for k in usage:
@@ -368,7 +424,8 @@ class SpecGenerator(Component):
             "questions": questions,
             "answered": answered,
             "revised": bool(previous_spec),
-            "model": self.model,
+            "provider": self._provider(),
+            "model": (self.model or "").strip() or os.getenv("SPEC_MODEL", "") or "claude (cli default)",
             "transcript_chars": len(transcript),
             "usage": usage,
         }
