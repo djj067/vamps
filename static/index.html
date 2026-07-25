@@ -16,6 +16,9 @@
     --danger: #E5484D; --danger-soft: #FDECEC;
     --success: #2F9E68; --success-soft: #E7F5EE;
     --ring: rgba(91,91,214,.35);
+    --hl-comment: #FEF3C7; --hl-flash: #D7D7F9;
+    --hl-chg1-bg: #E3F3F1; --hl-chg1-bar: #2AA79B;
+    --hl-chg2-bg: #FBF0DE; --hl-chg2-bar: #D9A441;
     --f: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --m: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     --sh-1: 0 1px 2px rgba(21,23,28,.05);
@@ -33,6 +36,9 @@
     --ring: rgba(140,140,240,.4);
     --sh-1: 0 1px 2px rgba(0,0,0,.4);
     --sh-2: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px -8px rgba(0,0,0,.6);
+    --hl-comment: rgba(224,184,99,.32); --hl-flash: rgba(140,140,240,.35);
+    --hl-chg1-bg: rgba(63,201,188,.20); --hl-chg1-bar: #45CDBF;
+    --hl-chg2-bg: rgba(224,184,99,.20); --hl-chg2-bar: #E4BC63;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -45,6 +51,9 @@
       --ring: rgba(140,140,240,.4);
       --sh-1: 0 1px 2px rgba(0,0,0,.4);
       --sh-2: 0 1px 3px rgba(0,0,0,.4), 0 8px 24px -8px rgba(0,0,0,.6);
+      --hl-comment: rgba(224,184,99,.32); --hl-flash: rgba(140,140,240,.35);
+      --hl-chg1-bg: rgba(63,201,188,.20); --hl-chg1-bar: #45CDBF;
+      --hl-chg2-bg: rgba(224,184,99,.20); --hl-chg2-bar: #E4BC63;
     }
   }
   html { color-scheme: light dark; }
@@ -213,13 +222,18 @@
   .cmt-resolve .icon { width: 13px; height: 13px; }
   .cmt-q { font-size: 13px; line-height: 1.5; color: var(--text); }
   .cmt-a { margin-left: auto; }   /* spacer so question text wraps cleanly */
+  .comments-title { position: absolute; top: 0; left: 4px; right: 4px; font-size: 13px; font-weight: 700;
+    letter-spacing: -.01em; color: var(--text-2); padding-bottom: 10px; margin-bottom: 4px;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .comments-title .ct-count { font-family: var(--m); font-size: 11px; font-weight: 500; color: var(--accent);
+    background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
   .comments-empty { position: absolute; top: 6px; left: 4px; right: 4px; font-size: 12px;
     color: var(--text-3); padding: 6px 2px; display: flex; gap: 7px; align-items: flex-start; }
   .comments-empty .icon { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 2px; color: var(--success); }
   .cmt-group { position: absolute; left: 4px; right: 4px; font-size: 10.5px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); padding: 2px 2px; }
-  #spec .has-comment { border-bottom: 2px solid #EBB84A; cursor: pointer; }
-  #spec .has-comment.cmt-active { background: #FEF3C7; }
+  #spec .has-comment { border-bottom: 2px solid var(--hl-chg2-bar); cursor: pointer; }
+  #spec .has-comment.cmt-active { background: var(--hl-comment); border-radius: 3px; }
   #spec { font-size: 14.5px; line-height: 1.72; color: var(--text); }
   #spec h1 { font-size: 22px; font-weight: 700; letter-spacing: -.025em; margin: 0 0 16px;
     padding-bottom: 14px; border-bottom: 1px solid var(--border); }
@@ -234,9 +248,9 @@
   /* change highlights: diff-style gutter, one colour per recent revision (newest→oldest) */
   #spec .chg { border-radius: 3px; }
   #spec .chg0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); animation: chgin .7s ease; }
-  #spec .chg1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
-  #spec .chg2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
-  @keyframes chgin { from { background: #d7d7f9; } to { background: var(--accent-soft); } }
+  #spec .chg1 { background: var(--hl-chg1-bg); box-shadow: inset 2px 0 0 var(--hl-chg1-bar); }
+  #spec .chg2 { background: var(--hl-chg2-bg); box-shadow: inset 2px 0 0 var(--hl-chg2-bar); }
+  @keyframes chgin { from { background: var(--hl-flash); } to { background: var(--accent-soft); } }
   /* fixed recency legend bubble (top-left, always visible while scrolling) */
   .chg-bubble { position: fixed; left: 16px; top: 256px; z-index: 30; background: var(--surface);
     border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--sh-2); padding: 10px 13px 11px; }
@@ -245,8 +259,8 @@
   .chg-bubble .lg { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); margin: 5px 0; }
   .chg-bubble .sw { width: 13px; height: 13px; border-radius: 3px; flex: 0 0 auto; }
   .chg-bubble .sw0 { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
-  .chg-bubble .sw1 { background: #E3F3F1; box-shadow: inset 2px 0 0 #2AA79B; }
-  .chg-bubble .sw2 { background: #FBF0DE; box-shadow: inset 2px 0 0 #D9A441; }
+  .chg-bubble .sw1 { background: var(--hl-chg1-bg); box-shadow: inset 2px 0 0 var(--hl-chg1-bar); }
+  .chg-bubble .sw2 { background: var(--hl-chg2-bg); box-shadow: inset 2px 0 0 var(--hl-chg2-bar); }
   .doc-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn.primary:hover { background: var(--accent-hover); }
@@ -924,8 +938,17 @@ function renderComments(){
   spec.querySelectorAll('.has-comment').forEach(el => { el.classList.remove('has-comment', 'cmt-active'); delete el.dataset.cmt; });
   if (specEditing) return;
   const open = questions.filter(q => !q.done);
+  // column title (matches the spec heading) — always shown so the column is labelled
+  const title = document.createElement('div');
+  title.className = 'comments-title';
+  title.innerHTML = `Clarifications${open.length ? ` <span class="ct-count">${open.length}</span>` : ''}`;
+  layer.appendChild(title);
+  const titleH = title.offsetHeight + 10;
   if (!open.length){
-    layer.innerHTML = `<div class="comments-empty">${svg('check')} No open questions — the spec is unambiguous so far.</div>`;
+    const empty = document.createElement('div');
+    empty.className = 'comments-empty'; empty.style.top = titleH + 'px';
+    empty.innerHTML = `${svg('check')} No open questions — the spec is unambiguous so far.`;
+    layer.appendChild(empty);
     return;
   }
   // If the pane isn't visible yet, offsets are 0 — showTab re-runs this on entry.
@@ -964,7 +987,7 @@ function renderComments(){
     return card;
   };
 
-  let cursor = 0;
+  let cursor = titleH;   // start below the column title
   const place = (el, gap) => { const top = Math.max(cursor + gap, 0); el.style.top = top + 'px'; cursor = top + el.offsetHeight; };
   for (const it of anchored){
     const card = makeCard(it);
