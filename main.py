@@ -622,8 +622,10 @@ async def spec(payload: dict):
     if USE_LANGFLOW:
         t0 = time.time()
         try:
-            # Pass the runtime provider (+ model/key for openrouter) so the toggle
-            # takes effect inside Langflow without touching its env.
+            # Pass provider + model as tweaks so the UI toggle takes effect.
+            # NOTE: do NOT tweak api_key — Langflow's run API rejects requests
+            # containing a secret-named field (returns HTML), so the OpenRouter
+            # key must come from Langflow's own OPENROUTER_API_KEY env var.
             node_tweaks = {
                 "previous_spec": previous_spec,
                 "resolved_questions": "\n".join(resolved),
@@ -632,8 +634,6 @@ async def spec(payload: dict):
             }
             if current_provider() == "openrouter":
                 node_tweaks["model"] = SPEC_MODEL
-                if OPENROUTER_API_KEY:
-                    node_tweaks["api_key"] = OPENROUTER_API_KEY
             tweaks = {LANGFLOW_SPEC_NODE: node_tweaks}
             data = await asyncio.to_thread(_lf_run, LANGFLOW_SPEC_FLOW, transcript, tweaks)
             data["latency_s"] = round(time.time() - t0, 2)
