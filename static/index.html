@@ -222,11 +222,12 @@
   .cmt-resolve .icon { width: 13px; height: 13px; }
   .cmt-q { font-size: 13px; line-height: 1.5; color: var(--text); }
   .cmt-a { margin-left: auto; }   /* spacer so question text wraps cleanly */
-  .comments-title { position: absolute; top: 0; left: 4px; right: 4px; font-size: 13px; font-weight: 700;
-    letter-spacing: -.01em; color: var(--text-2); padding-bottom: 10px; margin-bottom: 4px;
-    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
-  .comments-title .ct-count { font-family: var(--m); font-size: 11px; font-weight: 500; color: var(--accent);
-    background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
+  /* matches #spec h1 so the two column headers align */
+  .comments-title { position: absolute; top: 26px; left: 4px; right: 4px; font-size: 22px; font-weight: 700;
+    letter-spacing: -.025em; line-height: 1.72; color: var(--text); padding-bottom: 14px; margin: 0;
+    border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .comments-title .ct-count { font-family: var(--m); font-size: 12px; font-weight: 500; color: var(--accent);
+    background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; align-self: center; }
   .comments-empty { position: absolute; top: 6px; left: 4px; right: 4px; font-size: 12px;
     color: var(--text-3); padding: 6px 2px; display: flex; gap: 7px; align-items: flex-start; }
   .comments-empty .icon { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 2px; color: var(--success); }
@@ -943,7 +944,7 @@ function renderComments(){
   title.className = 'comments-title';
   title.innerHTML = `Clarifications${open.length ? ` <span class="ct-count">${open.length}</span>` : ''}`;
   layer.appendChild(title);
-  const titleH = title.offsetHeight + 10;
+  const titleH = title.offsetTop + title.offsetHeight + 12;   // title sits at top:26px
   if (!open.length){
     const empty = document.createElement('div');
     empty.className = 'comments-empty'; empty.style.top = titleH + 'px';
