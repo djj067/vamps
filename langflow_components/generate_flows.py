@@ -248,7 +248,7 @@ def main():
     openrouter_full = _full_pipeline(
         "VAMPS Full (OpenRouter)",
         "Transcript -> Spec (OpenRouter) -> Build Prototype -> HTML + spec. Demo: needs OPENROUTER_API_KEY.",
-        "fo", provider="openrouter", model="anthropic/claude-3.5-sonnet",
+        "fo", provider="openrouter", model="anthropic/claude-haiku-4.5",
     )
     (HERE / "vamps_full_openrouter.json").write_text(json.dumps(openrouter_full, indent=2))
     print("wrote vamps_full_openrouter.json")

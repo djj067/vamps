@@ -299,15 +299,24 @@ class SpecGenerator(Component):
         model = (self.model or "").strip() or os.getenv("SPEC_MODEL_CLI", "")
         if model:
             cmd += ["--model", model]
-        proc = subprocess.run(cmd, input=f"{system}\n\n{user}",
-                              capture_output=True, text=True, timeout=240)
-        wrapper = json.loads(proc.stdout or "{}")
+        prompt = f"{system}\n\n{user}"
+        wrapper, last = {}, ""
+        for _ in range(2):   # the CLI occasionally returns empty stdout; retry once
+            proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=240)
+            last = proc.stderr or ""
+            if (proc.stdout or "").strip():
+                wrapper = json.loads(proc.stdout)
+                if wrapper.get("result"):
+                    break
+        result = wrapper.get("result") or ""
+        if not result:
+            raise RuntimeError(f"claude CLI returned no output. stderr: {last[:200]}")
         u = wrapper.get("usage") or {}
         inp = (u.get("input_tokens", 0) or 0) + (u.get("cache_read_input_tokens", 0) or 0) \
             + (u.get("cache_creation_input_tokens", 0) or 0)
         out = u.get("output_tokens", 0) or 0
         usage = {"prompt_tokens": inp, "completion_tokens": out, "total_tokens": inp + out}
-        return (wrapper.get("result") or ""), usage
+        return result, usage
 
     def _build_messages(self, transcript, previous_spec, resolved, open_qs):
         if previous_spec.strip():

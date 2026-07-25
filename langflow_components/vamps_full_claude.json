@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "vamps_spec_generator",
-            "id": "Spec-fc",
-            "name": "spec_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "spec",
-            "id": "Build-fc",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Spec-fc{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Build-fc{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Spec-fc",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Build-fc",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "vamps_build_prototype",
             "id": "Build-fc",
             "name": "html",
@@ -58,6 +30,34 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_build_prototype\u0153,\u0153id\u0153:\u0153Build-fc\u0153,\u0153name\u0153:\u0153html\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "Html-fc",
         "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153Html-fc\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "In-fc",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "transcript",
+            "id": "Spec-fc",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-In-fc{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153In-fc\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-fc{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "In-fc",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153In-fc\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Spec-fc",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "animated": false,
@@ -92,28 +92,28 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "In-fc",
-            "name": "message",
+            "dataType": "vamps_spec_generator",
+            "id": "Spec-fc",
+            "name": "spec_text",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "transcript",
-            "id": "Spec-fc",
+            "fieldName": "spec",
+            "id": "Build-fc",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-In-fc{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153In-fc\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-fc{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-Spec-fc{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Build-fc{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
-        "source": "In-fc",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153In-fc\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Spec-fc",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+        "source": "Spec-fc",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-fc\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Build-fc",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-fc\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [

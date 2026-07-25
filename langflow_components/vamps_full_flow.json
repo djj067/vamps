@@ -6,28 +6,56 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "vamps_spec_generator",
-            "id": "Spec-vf",
-            "name": "spec_text",
+            "dataType": "CombineText",
+            "id": "Combine-vf",
+            "name": "combined_text",
             "output_types": [
               "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "input_value",
-            "id": "SpecOut-vf",
+            "fieldName": "transcript",
+            "id": "Spec-vf",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Spec-vf{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-SpecOut-vf{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153SpecOut-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-Combine-vf{\u0153dataType\u0153:\u0153CombineText\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153name\u0153:\u0153combined_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-vf{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
-        "source": "Spec-vf",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "SpecOut-vf",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153SpecOut-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+        "source": "Combine-vf",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153CombineText\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153name\u0153:\u0153combined_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Spec-vf",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_deepgram_transcribe",
+            "id": "Deepgram-vf",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "text1",
+            "id": "Combine-vf",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Deepgram-vf{\u0153dataType\u0153:\u0153vamps_deepgram_transcribe\u0153,\u0153id\u0153:\u0153Deepgram-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Combine-vf{\u0153fieldName\u0153:\u0153text1\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Deepgram-vf",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_deepgram_transcribe\u0153,\u0153id\u0153:\u0153Deepgram-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Combine-vf",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153text1\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "animated": false,
@@ -56,6 +84,34 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "Build-vf",
         "targetHandle": "{\u0153fieldName\u0153:\u0153spec\u0153,\u0153id\u0153:\u0153Build-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "vamps_notes_parser",
+            "id": "Notes-vf",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "text2",
+            "id": "Combine-vf",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Notes-vf{\u0153dataType\u0153:\u0153vamps_notes_parser\u0153,\u0153id\u0153:\u0153Notes-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Combine-vf{\u0153fieldName\u0153:\u0153text2\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "Notes-vf",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_notes_parser\u0153,\u0153id\u0153:\u0153Notes-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "Combine-vf",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153text2\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "animated": false,
@@ -92,84 +148,28 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "vamps_notes_parser",
-            "id": "Notes-vf",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text2",
-            "id": "Combine-vf",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Notes-vf{\u0153dataType\u0153:\u0153vamps_notes_parser\u0153,\u0153id\u0153:\u0153Notes-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Combine-vf{\u0153fieldName\u0153:\u0153text2\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Notes-vf",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_notes_parser\u0153,\u0153id\u0153:\u0153Notes-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Combine-vf",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153text2\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "vamps_deepgram_transcribe",
-            "id": "Deepgram-vf",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text1",
-            "id": "Combine-vf",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Deepgram-vf{\u0153dataType\u0153:\u0153vamps_deepgram_transcribe\u0153,\u0153id\u0153:\u0153Deepgram-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Combine-vf{\u0153fieldName\u0153:\u0153text1\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "Deepgram-vf",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_deepgram_transcribe\u0153,\u0153id\u0153:\u0153Deepgram-vf\u0153,\u0153name\u0153:\u0153text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Combine-vf",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153text1\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CombineText",
-            "id": "Combine-vf",
-            "name": "combined_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "transcript",
+            "dataType": "vamps_spec_generator",
             "id": "Spec-vf",
+            "name": "spec_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "SpecOut-vf",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Combine-vf{\u0153dataType\u0153:\u0153CombineText\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153name\u0153:\u0153combined_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-Spec-vf{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-Spec-vf{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-SpecOut-vf{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153SpecOut-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false,
-        "source": "Combine-vf",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153CombineText\u0153,\u0153id\u0153:\u0153Combine-vf\u0153,\u0153name\u0153:\u0153combined_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "Spec-vf",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
+        "source": "Spec-vf",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153Spec-vf\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "SpecOut-vf",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153SpecOut-vf\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [

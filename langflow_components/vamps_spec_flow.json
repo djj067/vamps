@@ -6,34 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-vamps1",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "transcript",
-            "id": "VampsSpec-vamps1",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-vamps1{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vamps1\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-VampsSpec-vamps1{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153VampsSpec-vamps1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
-        "selected": false,
-        "source": "ChatInput-vamps1",
-        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vamps1\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
-        "target": "VampsSpec-vamps1",
-        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153VampsSpec-vamps1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "vamps_spec_generator",
             "id": "VampsSpec-vamps1",
             "name": "spec_text",
@@ -58,6 +30,34 @@
         "sourceHandle": "{\u0153dataType\u0153:\u0153vamps_spec_generator\u0153,\u0153id\u0153:\u0153VampsSpec-vamps1\u0153,\u0153name\u0153:\u0153spec_text\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
         "target": "ChatOutput-vamps1",
         "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-vamps1\u0153,\u0153inputTypes\u0153:[\u0153Data\u0153,\u0153DataFrame\u0153,\u0153Message\u0153],\u0153type\u0153:\u0153other\u0153}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-vamps1",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "transcript",
+            "id": "VampsSpec-vamps1",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-vamps1{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vamps1\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}-VampsSpec-vamps1{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153VampsSpec-vamps1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "selected": false,
+        "source": "ChatInput-vamps1",
+        "sourceHandle": "{\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-vamps1\u0153,\u0153name\u0153:\u0153message\u0153,\u0153output_types\u0153:[\u0153Message\u0153]}",
+        "target": "VampsSpec-vamps1",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153transcript\u0153,\u0153id\u0153:\u0153VampsSpec-vamps1\u0153,\u0153inputTypes\u0153:[\u0153Message\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "nodes": [
