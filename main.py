@@ -470,7 +470,11 @@ def _lf_edge_count(flow_id: str) -> int:
         resp = http.get(f"{LANGFLOW_URL}/api/v1/flows/{flow_id}", headers=_lf_headers())
     if resp.status_code != 200:
         return -1
-    return len(((resp.json() or {}).get("data") or {}).get("edges", []))
+    try:                                    # a stale/deleted id can yield empty/non-JSON;
+        body = resp.json() or {}            # treat that as "unhealthy" so we re-resolve
+    except Exception:
+        return -1
+    return len((body.get("data") or {}).get("edges", []))
 
 
 def _lf_import(flow_file: Path) -> str:

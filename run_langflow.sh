@@ -31,22 +31,31 @@ trap 'echo; echo "stopping Langflow..."; kill $LF_PID 2>/dev/null || true' INT T
 echo "  waiting for Langflow to come up ..."
 until curl -sf http://localhost:7860/health_check >/dev/null 2>&1; do sleep 2; done
 
-echo "  importing the 3 VAMPS flows (idempotent) ..."
+echo "  refreshing the 3 VAMPS flows from disk ..."
 $VENV/python - <<'PY' || true
 import httpx, json
 BASE="http://localhost:7860/api/v1/flows/"
 FILES=["vamps_spec_api_flow","vamps_build_api_flow","vamps_full_openrouter"]
+names={json.load(open(f"langflow_components/{p}.json"))["name"] for p in FILES}
+# Match our flows exactly OR with Langflow's " (1)" collision suffix.
+def is_ours(n): return any(n == t or n.startswith(t + " (") for t in names)
 with httpx.Client(timeout=60) as h:
-    body=h.get(BASE, params={"header_flows":"true"}).json()
-    existing={f["name"] for f in (body if isinstance(body, list) else body.get("items", []))}
+    body=h.get(BASE, params={"get_all":"true","header_flows":"true"}).json()
+    items=body if isinstance(body, list) else body.get("items", [])
+    # DELETE then re-import so the running flows always match the on-disk JSON.
+    # Langflow's DB persists in the venv (not .langflow_data), so a name that already
+    # exists is usually a STALE copy — keeping it caused "Could not find a JSON result".
+    removed=0
+    for f in items:
+        if is_ours(f["name"]):
+            h.delete(f"{BASE}{f['id']}"); removed+=1
+    if removed:
+        print(f"    removed {removed} stale VAMPS flow(s)")
     for p in FILES:
         name=json.load(open(f"langflow_components/{p}.json"))["name"]
-        if name in existing:
-            print(f"    present: {name}")
-        else:
-            h.post(BASE, content=open(f"langflow_components/{p}.json","rb").read(),
-                   headers={"Content-Type":"application/json"})
-            print(f"    imported: {name}")
+        h.post(BASE, content=open(f"langflow_components/{p}.json","rb").read(),
+               headers={"Content-Type":"application/json"})
+        print(f"    imported: {name}")
 PY
 
 echo

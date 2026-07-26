@@ -4,10 +4,21 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     # Render injects $PORT; the Dockerfile CMD binds 0.0.0.0:$PORT.
+    # No Langflow on Render — the app runs its inline path: spec via OpenRouter,
+    # prototype build via the Claude Code CLI (installed in the image).
     envVars:
-      - key: OPENAI_API_KEY
-        sync: false          # set in the Render dashboard (secret)
+      # --- secrets: set these in the Render dashboard (sync:false) ---
       - key: DEEPGRAM_API_KEY
-        sync: false
+        sync: false               # transcription
+      - key: OPENROUTER_API_KEY
+        sync: false               # spec generation (OpenRouter)
       - key: CLAUDE_CODE_OAUTH_TOKEN
-        sync: false          # your Claude Code subscription token (for /build)
+        sync: false               # prototype build (Claude Code CLI)
+      # --- non-secret config ---
+      - key: SPEC_PROVIDER
+        value: openrouter
+      - key: SPEC_MODEL
+        value: anthropic/claude-haiku-4.5
+      - key: TRANSCRIBE_MODEL
+        value: nova-3
+      # LANGFLOW_ENABLED intentionally unset -> inline path (no Langflow needed).
