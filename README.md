@@ -10,7 +10,8 @@ spec from the running transcript — filtering out off-topic chatter as it goes.
 ## What it does
 
 - **Live transcript → spec.** Each clip is transcribed (Deepgram `nova-3`) and the
-  spec is auto-revised (OpenAI `gpt-5.4-mini`), building on the previous version.
+  spec is auto-revised (Claude via OpenRouter — `anthropic/claude-haiku-4.5`),
+  building on the previous version.
 - **Off-topic filtering.** Small talk, logistics, and tangents are ignored — only
   product-relevant content shapes the spec.
 - **Editable everywhere.** Transcript sections are foldable and editable; the spec
@@ -29,8 +30,8 @@ spec from the running transcript — filtering out off-topic chatter as it goes.
 
 ```
 Mic → ~60s segments → /transcribe (Deepgram nova-3) → live transcript (editable)
-                                                        → /spec (gpt-5.4-mini) → functional spec + questions
-                                        spec → /build (Claude Code) → index.html prototype
+                                                        → /spec (OpenRouter · claude-haiku-4.5) → functional spec + questions
+                                        spec → /build (Claude Code CLI) → index.html prototype
 ```
 
 Every segment is also saved to `recordings/` as a local backup.
@@ -48,15 +49,23 @@ uv run uvicorn main:app --reload --port 8000
 Put your keys in a `.env` file (git-ignored):
 
 ```
-OPENAI_API_KEY=...
-DEEPGRAM_API_KEY=...
-SPEC_MODEL=gpt-5.4-mini        # optional override
-TRANSCRIBE_MODEL=nova-3        # optional override
-TRANSCRIBE_LANGUAGE=en         # optional override
+DEEPGRAM_API_KEY=...            # transcription
+OPENROUTER_API_KEY=...          # spec generation (OpenRouter)
+CLAUDE_CODE_OAUTH_TOKEN=...     # prototype build (Claude Code CLI)
+SPEC_PROVIDER=openrouter        # openrouter | claude_cli
+SPEC_MODEL=anthropic/claude-haiku-4.5   # OpenRouter model slug
+TRANSCRIBE_MODEL=nova-3         # optional override
+TRANSCRIBE_LANGUAGE=en          # optional override
 ```
 
 The prototype builder needs the [Claude Code](https://claude.com/claude-code) CLI
-(`claude`) installed and authenticated on the machine running the server.
+(`claude`) installed and authenticated on the machine running the server (or the
+`CLAUDE_CODE_OAUTH_TOKEN` above). On Render the CLI is installed by the `Dockerfile`.
+
+> Deploying to Render: use the **Docker** runtime (`render.yaml` + `Dockerfile`) so the
+> `claude` CLI is present, and set `DEEPGRAM_API_KEY`, `OPENROUTER_API_KEY`,
+> `CLAUDE_CODE_OAUTH_TOKEN` as secret env vars. Do **not** set `OPENAI_API_KEY` or a
+> bare `gpt-*` model — spec runs on OpenRouter and needs a `provider/model` slug.
 
 ## Files
 

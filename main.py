@@ -1012,6 +1012,52 @@ NOT create other files."""
 _TOOL_FLAGS = ["--permission-mode", "acceptEdits",
                "--allowed-tools", "Write", "Edit", "Read", "MultiEdit"]
 
+# --- Option B (inline): build the prototype via an OpenRouter Claude model ------
+# Used when provider == openrouter and Langflow is off (e.g. on Render) — a single
+# chat completion whose reply IS the index.html, so no Claude Code CLI is needed.
+BUILD_SYSTEM_OR = """You are a senior front-end engineer. Given a functional
+specification, produce a SINGLE, self-contained clickable prototype as ONE complete
+index.html file:
+- All HTML, CSS, and JavaScript inline. No external files, CDNs, build steps, or network calls.
+- Use realistic placeholder/mock data so the key screens and flows are demonstrable by clicking.
+- Keep it clean and simple — a visual prototype, not a finished product.
+Output ONLY the raw HTML document, starting with <!doctype html>. Do NOT wrap it in
+markdown code fences and do NOT add any commentary before or after."""
+
+BUILD_USER_OR = """Functional specification:
+---
+{spec}
+---
+Return the complete index.html now."""
+
+BUILD_EDIT_SYSTEM = """You are a senior front-end engineer editing an existing
+single-file HTML prototype. Apply ONLY the requested change and return the COMPLETE
+updated index.html. Keep everything else exactly as it was. All HTML/CSS/JS stays
+inline. Output ONLY the raw HTML document starting with <!doctype html> — no
+markdown fences, no commentary."""
+
+BUILD_EDIT_USER = """CURRENT index.html:
+---
+{html}
+---
+CHANGE REQUESTED:
+{instruction}
+
+Return the full updated index.html now."""
+
+
+def _strip_html(text: str) -> str:
+    """Pull a clean HTML document out of a chat reply (drop code fences / preamble)."""
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\s*", "", t)
+        t = re.sub(r"\s*```$", "", t).strip()
+    low = t.lower()
+    idxs = [low.find(m) for m in ("<!doctype", "<html") if low.find(m) != -1]
+    if idxs and min(idxs) > 0:
+        return t[min(idxs):]
+    return t
+
 
 def _safe_id(s: str) -> str:
     return re.sub(r"[^A-Za-z0-9_-]", "", s)[:40]
@@ -1089,6 +1135,56 @@ def _lf_build_worker(job_id: str, project_id: str, spec_md: str, want_resume: bo
         job["done"] = True
 
 
+def _openrouter_build_worker(job_id: str, project_id: str, spec_md: str, out: Path, instruction: str = ""):
+    """Background thread: build/edit the prototype via OpenRouter (no Claude Code CLI).
+
+    Mirrors the Langflow BuildPrototype component's Option B path so the inline
+    deploy (e.g. Render) can build in openrouter mode. Same job shape as the
+    Langflow worker so build_status/build_cancel handle it identically.
+    """
+    job = BUILD_JOBS[job_id]
+    try:
+        index_path = out / "index.html"
+        existing = ""
+        if instruction and index_path.exists():
+            existing = index_path.read_text(encoding="utf-8", errors="replace")
+        if instruction and existing:
+            messages = [{"role": "system", "content": BUILD_EDIT_SYSTEM},
+                        {"role": "user", "content": BUILD_EDIT_USER.format(html=existing, instruction=instruction)}]
+        else:
+            messages = [{"role": "system", "content": BUILD_SYSTEM_OR},
+                        {"role": "user", "content": BUILD_USER_OR.format(spec=spec_md)}]
+        t0 = time.time()
+        resp = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=OPENROUTER_API_KEY).chat.completions.create(
+            model=BUILD_MODEL, temperature=0.4, messages=messages,
+        )
+        html = _strip_html(resp.choices[0].message.content or "")
+        ok = "<" in html and len(html) > 30 and not job.get("cancelled")
+        if ok:
+            index_path.write_text(html, encoding="utf-8")
+            job["version"] = _snapshot_version(out)
+        u = getattr(resp, "usage", None)
+        inp = getattr(u, "prompt_tokens", 0) or 0
+        outp = getattr(u, "completion_tokens", 0) or 0
+        elapsed = round(time.time() - t0, 1)
+        job["result"] = {
+            "ok": ok, "status": "done" if ok else "error", "html": html, "returncode": 0 if ok else 1,
+            "tokens": {"input": inp, "output": outp, "total": inp + outp, "cost_usd": None},
+            "log": f"openrouter build via {BUILD_MODEL}" if ok else "openrouter build returned no usable HTML",
+        }
+        if ok:
+            plog(MARK["build_ok"], f"prototype HTML {'edited' if instruction else 'generated'}",
+                 project=project_id, provider="openrouter", version=job.get("version"),
+                 html_chars=len(html), in_tok=inp, out_tok=outp, elapsed_s=elapsed)
+        else:
+            plog(MARK["build_err"], "openrouter build produced no usable HTML", project=project_id, elapsed_s=elapsed)
+    except Exception as e:
+        job["error"] = str(e)
+        plog(MARK["build_err"], str(e), project=project_id)
+    finally:
+        job["done"] = True
+
+
 @app.post("/build")
 async def build(payload: dict):
     """Kick off a headless Claude Code run that turns the spec into a prototype.
@@ -1127,6 +1223,23 @@ async def build(payload: dict):
         BUILD_JOBS[job_id] = job
         t = threading.Thread(target=_lf_build_worker,
                              args=(job_id, project_id, spec_md, want_resume, out, instruction), daemon=True)
+        job["thread"] = t
+        t.start()
+        return {"ok": True, "job_id": job_id, "project_id": project_id, "resumed": False}
+
+    # Inline OpenRouter build (Option B): no Langflow, no Claude Code CLI — build/edit
+    # the HTML with a Claude model directly. Same background-job + polling contract.
+    if current_provider() == "openrouter":
+        out = GEN_DIR / project_id
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "SPEC.md").write_text(spec_md, encoding="utf-8")
+        job_id = uuid.uuid4().hex[:8]
+        job = {"mode": "openrouter", "dir": out, "project_id": project_id,
+               "started": time.time(), "done": False, "result": None,
+               "error": None, "cancelled": False}
+        BUILD_JOBS[job_id] = job
+        t = threading.Thread(target=_openrouter_build_worker,
+                             args=(job_id, project_id, spec_md, out, instruction), daemon=True)
         job["thread"] = t
         t.start()
         return {"ok": True, "job_id": job_id, "project_id": project_id, "resumed": False}
@@ -1225,8 +1338,9 @@ def build_status(job_id: str):
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
 
-    # Langflow-backed job: state lives on the background thread, not a subprocess.
-    if job.get("mode") == "langflow":
+    # Thread-backed job (Langflow or inline OpenRouter): state lives on the background
+    # thread, not a subprocess. Both use the same job shape.
+    if job.get("mode") in ("langflow", "openrouter"):
         index_ready = (job["dir"] / "index.html").exists()
         if not job["done"]:
             status = "running"
@@ -1291,9 +1405,9 @@ def build_cancel(job_id: str):
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "error": "unknown job"})
 
-    # Langflow-backed job: we can't interrupt the in-flight HTTP run, but we flag
-    # it so the worker won't overwrite the last-good prototype when it returns.
-    if job.get("mode") == "langflow":
+    # Thread-backed job (Langflow / inline OpenRouter): we can't interrupt the in-flight
+    # call, but we flag it so the worker won't overwrite the last-good prototype.
+    if job.get("mode") in ("langflow", "openrouter"):
         job["cancelled"] = True
         return {"ok": True, "cancelled": True}
 
